@@ -1,0 +1,60 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.4.0'
+    id 'io.spring.dependency-management' version '1.1.6'
+}
+
+group = 'com.shoppingapp'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Core Spring Boot dependencies
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+
+    // JPA and Database Dependencies
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'mysql:mysql-connector-java:8.0.26'
+    implementation 'jakarta.persistence:jakarta.persistence-api:3.1.0'
+
+    // Spring Mail for email functionality (remove if not needed)
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'  // Corrected typo
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-json'  // Optional
+    implementation 'org.springframework.security:spring-security-core'
+    implementation 'org.springframework.security:spring-security-web'
+    implementation 'org.springframework.security:spring-security-config'
+
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+
+
+
+    // Jakarta Validation and Hibernate Validator
+    implementation 'jakarta.validation:jakarta.validation-api:3.0.0'
+    implementation 'org.hibernate.validator:hibernate-validator:8.0.1.Final'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    // PayPal SDK for Orders API
+   // implementation 'com.paypal.sdk:paypal-core:1.7.2'
+
+    // Testing Dependencies (optional)
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+    // Optional: H2 database for development (remove if not using H2)
+    runtimeOnly 'com.h2database:h2'
+}
+
+tasks.named('test').configure {
+    enabled = false
+}
