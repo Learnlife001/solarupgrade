@@ -85,8 +85,45 @@ export DB_USERNAME=... DB_PASSWORD=...
 SPRING_PROFILES_ACTIVE=mysql ./gradlew bootRun
 ```
 
-That profile sets `spring.jpa.hibernate.ddl-auto=validate` deliberately, so it
-will refuse to start until the schema exists. See "Known gaps" below.
+Flyway creates the schema on first start, so there is nothing to set up by hand.
+
+## Database schema
+
+Flyway owns the schema. Hibernate runs with `ddl-auto=validate` on every profile
+and never creates or alters a table — it only checks that the entities still
+match what the migrations produced. If the two drift apart, startup fails, which
+means **the test suite fails**: drift is caught in CI rather than on deploy.
+
+Migrations are per-dialect, selected by the `{vendor}` placeholder in
+`spring.flyway.locations`:
+
+```
+src/main/resources/db/migration/
+  h2/V1__initial_schema.sql      <- local development and tests
+  mysql/V1__initial_schema.sql   <- the mysql profile
+```
+
+Two files rather than one because the dialects genuinely disagree: H2 wants
+`TIMESTAMP(6) WITH TIME ZONE` and `NUMERIC` where MySQL wants `DATETIME(6)` and
+`DECIMAL`, and the identity syntax differs. Both were generated from the
+entities using Hibernate's own schema export, not written by hand, so the column
+types match what `validate` expects.
+
+**To change the schema**, add a new numbered file to *both* directories — never
+edit an applied migration, since Flyway checksums them and will refuse to run:
+
+```
+V2__add_product_sku.sql
+```
+
+Then run `./gradlew build`. If the change doesn't match the entities, `validate`
+fails and tells you which column is wrong.
+
+One caveat worth knowing: the H2 baseline runs on every test, so it is
+continuously verified. **The MySQL baseline has not been executed against a real
+MySQL server** — there was none available when it was written. It is generated
+from Hibernate's MySQL dialect and should be correct, but give it one smoke test
+against a scratch database before trusting it with anything real.
 
 ## Layout
 
@@ -99,17 +136,17 @@ src/main/java/com/shoppingapp/shoppingwebapp/
   repository/  Spring Data JPA repositories
   service/     ProductService, CartService, OrderService, UserService, EmailService
 src/main/resources/
-  templates/   Thymeleaf pages; fragments/layout.html holds the shared header
-  static/css/  stylesheet
+  db/migration/ Flyway migrations, one directory per dialect
+  templates/    Thymeleaf pages; fragments/layout.html holds the shared header
+  static/css/   stylesheet
 ```
 
 ## Known gaps
 
 These are deliberate and worth picking up next:
 
-- **No schema migrations.** The `mysql` profile expects a schema it cannot
-  create. Add Flyway or Liquibase and generate the baseline from the entities
-  before deploying anywhere real.
+- **The MySQL migration is unverified against a real server**, as described
+  under "Database schema". One smoke test against a scratch database clears it.
 - **No payment provider**, as described above.
 - **No admin UI.** The `ADMIN` role exists and is assignable, but nothing uses
   it; products can only be changed through the seeder or directly in the
