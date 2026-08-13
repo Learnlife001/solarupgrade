@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Your basket &middot; SolarUpgrade</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container">
+    <h1>Your basket</h1>
+
+    <p class="flash" th:if="${message}" th:text="${message}"></p>
+    <p class="flash error" th:if="${error}" th:text="${error}"></p>
+
+    <p class="empty" th:if="${#lists.isEmpty(items)}">
+        Your basket is empty. <a th:href="@{/products}">Browse the shop</a>.
+    </p>
+
+    <table class="line-items" th:unless="${#lists.isEmpty(items)}">
+        <thead>
+        <tr>
+            <th>Product</th>
+            <th>Price</th>
+            <th>Quantity</th>
+            <th>Line total</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="item : ${items}">
+            <td>
+                <a th:href="@{/products/{id}(id=${item.product.id})}" th:text="${item.product.name}">Product</a>
+            </td>
+            <td>&pound;<span th:text="${#numbers.formatDecimal(item.product.price, 1, 2)}">0.00</span></td>
+            <td>
+                <form th:action="@{/cart/{id}/update(id=${item.id})}" method="post" class="inline-form">
+                    <input type="number" name="quantity" th:value="${item.quantity}" min="0" class="qty-input">
+                    <button type="submit" class="link-button">Update</button>
+                </form>
+            </td>
+            <td>&pound;<span th:text="${#numbers.formatDecimal(item.lineTotal, 1, 2)}">0.00</span></td>
+            <td>
+                <form th:action="@{/cart/{id}/remove(id=${item.id})}" method="post" class="inline-form">
+                    <button type="submit" class="link-button danger">Remove</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+        <tfoot>
+        <tr>
+            <th colspan="3">Total</th>
+            <th colspan="2">&pound;<span th:text="${#numbers.formatDecimal(total, 1, 2)}">0.00</span></th>
+        </tr>
+        </tfoot>
+    </table>
+
+    <p th:unless="${#lists.isEmpty(items)}">
+        <a class="button-primary" th:href="@{/checkout}">Proceed to checkout</a>
+    </p>
+</main>
+
+<div th:replace="~{fragments/layout :: footer}"></div>
+
+</body>
+</html>

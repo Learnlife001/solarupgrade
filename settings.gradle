@@ -1,1 +1,7 @@
+plugins {
+    // Lets Gradle provision the Java 17 toolchain on machines that do not have one
+    // installed, instead of failing the build outright.
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.8.0'
+}
+
 rootProject.name = 'shopping-webapp'

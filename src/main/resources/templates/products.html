@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Shop &middot; SolarUpgrade</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container">
+    <h1>Shop</h1>
+
+    <form class="search-form" th:action="@{/products}" method="get">
+        <input type="search" name="q" th:value="${query}" placeholder="Search products">
+        <button type="submit" class="button-primary">Search</button>
+    </form>
+
+    <nav class="category-filter">
+        <a th:href="@{/products}" th:classappend="${selectedCategory == null} ? 'active'">All</a>
+        <a th:each="cat : ${allCategories}"
+           th:href="@{/products(category=${cat})}"
+           th:text="${cat.displayName}"
+           th:classappend="${selectedCategory != null and selectedCategory.name() == cat.name()} ? 'active'">Category</a>
+    </nav>
+
+    <p th:if="${#lists.isEmpty(products)}" class="empty">No products matched.</p>
+
+    <div class="product-grid">
+        <article class="product-card" th:each="product : ${products}">
+            <h3>
+                <a th:href="@{/products/{id}(id=${product.id})}" th:text="${product.name}">Product</a>
+            </h3>
+            <p class="category" th:text="${product.category.displayName}">Category</p>
+            <p class="price">&pound;<span th:text="${#numbers.formatDecimal(product.price, 1, 2)}">0.00</span></p>
+            <p class="stock out-of-stock" th:unless="${product.inStock}">Out of stock</p>
+        </article>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: footer}"></div>
+
+</body>
+</html>

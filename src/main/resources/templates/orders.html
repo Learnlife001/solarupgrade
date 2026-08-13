@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>My orders &middot; SolarUpgrade</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container">
+    <h1>My orders</h1>
+
+    <p class="empty" th:if="${#lists.isEmpty(orders)}">
+        You have not placed any orders yet. <a th:href="@{/products}">Browse the shop</a>.
+    </p>
+
+    <table class="line-items" th:unless="${#lists.isEmpty(orders)}">
+        <thead>
+        <tr>
+            <th>Order</th>
+            <th>Placed</th>
+            <th>Items</th>
+            <th>Total</th>
+            <th>Status</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="order : ${orders}">
+            <td><a th:href="@{/orders/{id}(id=${order.id})}">#<span th:text="${order.id}">0</span></a></td>
+            <td th:text="${order.placedAtShortDisplay}">date</td>
+            <td th:text="${order.itemCount}">0</td>
+            <td>&pound;<span th:text="${#numbers.formatDecimal(order.total, 1, 2)}">0.00</span></td>
+            <td th:text="${order.status.displayName}">status</td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+
+<div th:replace="~{fragments/layout :: footer}"></div>
+
+</body>
+</html>

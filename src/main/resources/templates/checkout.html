@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Checkout &middot; SolarUpgrade</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container">
+    <h1>Checkout</h1>
+
+    <div class="checkout-layout">
+        <section class="checkout-form">
+            <h2>Delivery details</h2>
+
+            <form th:action="@{/checkout}" th:object="${checkoutForm}" method="post">
+                <label>
+                    Name
+                    <input type="text" th:field="*{shippingName}">
+                    <span class="field-error" th:if="${#fields.hasErrors('shippingName')}"
+                          th:errors="*{shippingName}">error</span>
+                </label>
+
+                <label>
+                    Address
+                    <textarea rows="3" th:field="*{shippingAddress}"></textarea>
+                    <span class="field-error" th:if="${#fields.hasErrors('shippingAddress')}"
+                          th:errors="*{shippingAddress}">error</span>
+                </label>
+
+                <label>
+                    Postcode
+                    <input type="text" th:field="*{shippingPostcode}">
+                    <span class="field-error" th:if="${#fields.hasErrors('shippingPostcode')}"
+                          th:errors="*{shippingPostcode}">error</span>
+                </label>
+
+                <button type="submit" class="button-primary">Place order</button>
+            </form>
+        </section>
+
+        <aside class="order-review">
+            <h2>Order review</h2>
+            <ul class="review-lines">
+                <li th:each="item : ${items}">
+                    <span th:text="${item.quantity} + ' x ' + ${item.product.name}">1 x Product</span>
+                    <span>&pound;<span th:text="${#numbers.formatDecimal(item.lineTotal, 1, 2)}">0.00</span></span>
+                </li>
+            </ul>
+            <p class="review-total">
+                <strong>Total</strong>
+                <strong>&pound;<span th:text="${#numbers.formatDecimal(total, 1, 2)}">0.00</span></strong>
+            </p>
+            <p class="note">Payment is captured after the order is placed.</p>
+        </aside>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: footer}"></div>
+
+</body>
+</html>
