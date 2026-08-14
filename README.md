@@ -85,7 +85,16 @@ export DB_USERNAME=... DB_PASSWORD=...
 SPRING_PROFILES_ACTIVE=mysql ./gradlew bootRun
 ```
 
-Flyway creates the schema on first start, so there is nothing to set up by hand.
+Create an empty database and grant the user rights to it; Flyway builds the
+schema on first start, so there is nothing else to set up by hand.
+
+The connection uses `sslMode=PREFERRED`, the driver's own default. Do not
+replace it with the older `useSSL=false`: MySQL 8 authenticates with
+`caching_sha2_password`, which over an unencrypted connection needs the server's
+public key, and requesting that key is refused by default — the connection then
+fails with `Public Key Retrieval is not allowed`. Set `DB_SSL_MODE=REQUIRED` to
+insist on TLS in production. `DISABLED` only works against a server whose
+account uses `mysql_native_password`, and gives up transport encryption.
 
 ## Database schema
 
@@ -119,11 +128,10 @@ V2__add_product_sku.sql
 Then run `./gradlew build`. If the change doesn't match the entities, `validate`
 fails and tells you which column is wrong.
 
-One caveat worth knowing: the H2 baseline runs on every test, so it is
-continuously verified. **The MySQL baseline has not been executed against a real
-MySQL server** — there was none available when it was written. It is generated
-from Hibernate's MySQL dialect and should be correct, but give it one smoke test
-against a scratch database before trusting it with anything real.
+Both baselines have been run for real: the H2 one on every test, and the MySQL
+one against MySQL 8.0.46, where Flyway applied it, `validate` accepted every
+column, and a full registration-to-checkout flow persisted correctly
+(`datetime(6)` precision and `decimal(10,2)` money both intact).
 
 ## Layout
 
@@ -145,8 +153,6 @@ src/main/resources/
 
 These are deliberate and worth picking up next:
 
-- **The MySQL migration is unverified against a real server**, as described
-  under "Database schema". One smoke test against a scratch database clears it.
 - **No payment provider**, as described above.
 - **No admin UI.** The `ADMIN` role exists and is assignable, but nothing uses
   it; products can only be changed through the seeder or directly in the
