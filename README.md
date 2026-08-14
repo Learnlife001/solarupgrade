@@ -28,8 +28,8 @@ and handles the cart and orders. It deploys as a single service.
 
 | Concern | Service | How |
 |---|---|---|
-| Application | **Render** | Docker web service, blueprint in `render.yaml` |
-| Database | **Supabase** | PostgreSQL, `supabase` profile |
+| Application | **Render** | Docker web service, declared in `render.yaml` |
+| Database | **Render Postgres** | managed, declared in the same blueprint |
 | Email | **Resend** | HTTP API, `resend` profile |
 
 There is deliberately **no Vercel deployment**. Vercel hosts static sites and JS
@@ -37,15 +37,23 @@ serverless functions; it cannot run Spring Boot, and this app has no separate
 frontend to put there. Splitting the Thymeleaf pages into a Next.js app talking
 to a REST API would change that, but it is a rewrite, not a config change.
 
-### 1. Supabase
+### 1. Database
 
-Create a project (or reuse one) and take the connection details from
-**Project Settings → Database**. Nothing else needs configuring: Flyway creates
-the schema on first boot from `db/migration/postgresql`.
+`render.yaml` declares the Postgres instance alongside the web service, and
+wires every connection value into the app with `fromDatabase`. There is nothing
+to copy by hand and no password in the repository. Flyway creates the schema on
+first boot from `db/migration/postgresql`.
 
-This app manages its own `users` table with BCrypt passwords and **does not use
-Supabase Auth**. The tables live in the `public` schema alongside Supabase's own
-`auth` schema without interfering with it.
+Both run in the same region, so they talk over Render's private network;
+`ipAllowList: []` keeps the database off the public internet entirely.
+
+> **The free Postgres plan expires after 30 days.** Render deletes free database
+> instances at that point and the data goes with them. Fine for a demo; move to
+> a paid instance before this holds anything you care about.
+
+The `postgres` profile is provider-neutral — it is only a set of environment
+variables, so the same build runs against Supabase, Neon or a local server by
+pointing `DB_HOST` elsewhere. Supabase specifically needs `DB_SSL_MODE=require`.
 
 ### 2. Resend
 
@@ -64,19 +72,31 @@ session.
 
 ### 3. Render
 
-Point Render at this repository; it reads `render.yaml`. Set the values marked
-`sync: false` in the dashboard — they are secrets and are deliberately not in
-the file:
+Point Render at this repository and choose **Blueprint**; it reads
+`render.yaml` and creates both the database and the web service.
+
+**One value is not in the file**, because it is a secret:
 
 | Variable | Where it comes from |
 |---|---|
-| `DB_HOST` | Supabase → Project Settings → Database |
-| `DB_USERNAME` | usually `postgres` |
-| `DB_PASSWORD` | the database password you set |
 | `RESEND_API_KEY` | <https://resend.com/api-keys> |
 
-`SPRING_PROFILES_ACTIVE` is already set to `supabase,resend`. Render injects
-`PORT` and the container binds it; `/actuator/health` gates the deploy.
+Everything else is handled: the database credentials come from the managed
+instance via `fromDatabase`, `SPRING_PROFILES_ACTIVE` is set to
+`postgres,resend`, Render injects `PORT` and the container binds it, and
+`/actuator/health` gates the deploy going live.
+
+A successful first boot logs:
+
+```
+Migrating schema "public" to version "1 - initial schema"
+Successfully applied 1 migration to schema "public", now at version v1
+Started ShoppingWebappApplication
+```
+
+If the entities and the migration ever disagree, `validate` fails startup with
+the offending column named — the deploy stops rather than running against a
+schema that does not match.
 
 **Demo data never reaches production.** The seeder that creates
 `demo@solarupgrade.example` is gated on `app.seed-demo-data`, which is true only
@@ -141,16 +161,18 @@ thrown, so it can never roll back an order that was already written.
 Both database profiles read every value from the environment — no credentials
 are committed.
 
-**PostgreSQL / Supabase:**
+**PostgreSQL:**
 
 ```bash
-export DB_HOST=... DB_NAME=postgres
-export DB_USERNAME=postgres DB_PASSWORD=...
-SPRING_PROFILES_ACTIVE=supabase ./gradlew bootRun
+export DB_HOST=localhost DB_NAME=solarupgrade
+export DB_USERNAME=... DB_PASSWORD=...
+SPRING_PROFILES_ACTIVE=postgres ./gradlew bootRun
 ```
 
-Against a local Postgres rather than Supabase, add `DB_SSL_MODE=disable`;
-Supabase itself requires `require`, which is the default.
+`DB_SSL_MODE` defaults to `prefer`, which negotiates TLS when the server offers
+it and connects anyway when it does not — so this works against a local server
+and Render's private network alike. Set `require` when connecting across the
+public internet.
 
 **MySQL:**
 
@@ -184,7 +206,7 @@ Migrations are per-dialect, selected by the `{vendor}` placeholder in
 ```
 src/main/resources/db/migration/
   h2/V1__initial_schema.sql          <- local development and tests
-  postgresql/V1__initial_schema.sql  <- the supabase profile
+  postgresql/V1__initial_schema.sql  <- the postgres profile (Render, Supabase)
   mysql/V1__initial_schema.sql       <- the mysql profile
 ```
 

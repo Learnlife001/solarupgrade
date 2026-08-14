@@ -1,8 +1,18 @@
-# Render Blueprint. Point Render at this repository and it reads this file.
+# Render Blueprint. Point Render at this repository and it reads this file,
+# creating both the database and the web service.
 #
-# Secrets are deliberately NOT here: every value marked sync:false must be set
-# in the Render dashboard (or via a secret group), so nothing sensitive is
-# committed. See the README for where each value comes from.
+# The database credentials are wired from the managed Postgres below via
+# fromDatabase, so there is nothing to copy by hand and no password ends up in
+# this file. The only secret you set yourself is the Resend API key.
+
+databases:
+  - name: solarupgrade-db
+    databaseName: solarupgrade
+    user: solarupgrade
+    plan: free
+    region: frankfurt
+    postgresMajorVersion: "16"
+    ipAllowList: []   # empty = reachable only from inside Render, not the internet
 
 services:
   - type: web
@@ -10,6 +20,7 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     plan: free
+    # Same region as the database, so they talk over Render's private network.
     region: frankfurt
     branch: master
 
@@ -17,28 +28,42 @@ services:
     healthCheckPath: /actuator/health
 
     envVars:
-      # supabase = PostgreSQL via Supabase, resend = transactional email.
+      # postgres = the managed database below, resend = transactional email.
       - key: SPRING_PROFILES_ACTIVE
-        value: supabase,resend
+        value: postgres,resend
 
-      # --- Supabase (Project Settings -> Database) ---------------------------
+      # --- Database: filled in by Render from solarupgrade-db ----------------
       - key: DB_HOST
-        sync: false
+        fromDatabase:
+          name: solarupgrade-db
+          property: host
       - key: DB_PORT
-        value: "5432"
+        fromDatabase:
+          name: solarupgrade-db
+          property: port
       - key: DB_NAME
-        value: postgres
+        fromDatabase:
+          name: solarupgrade-db
+          property: database
       - key: DB_USERNAME
-        sync: false
+        fromDatabase:
+          name: solarupgrade-db
+          property: user
       - key: DB_PASSWORD
-        sync: false
+        fromDatabase:
+          name: solarupgrade-db
+          property: password
+
+      # Private network between service and database; see the note in
+      # application-postgres.properties.
       - key: DB_SSL_MODE
-        value: require
-      # The free Supabase tier allows few connections; keep each instance modest.
+        value: prefer
+      # The free database plan allows few connections.
       - key: DB_POOL_SIZE
         value: "5"
 
-      # --- Resend (https://resend.com/api-keys) ------------------------------
+      # --- Resend: the one value you set yourself ----------------------------
+      # https://resend.com/api-keys
       - key: RESEND_API_KEY
         sync: false
       - key: MAIL_FROM
