@@ -1,0 +1,45 @@
+# Render Blueprint. Point Render at this repository and it reads this file.
+#
+# Secrets are deliberately NOT here: every value marked sync:false must be set
+# in the Render dashboard (or via a secret group), so nothing sensitive is
+# committed. See the README for where each value comes from.
+
+services:
+  - type: web
+    name: solarupgrade
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: frankfurt
+    branch: master
+
+    # Actuator health endpoint; Render uses it to gate a deploy going live.
+    healthCheckPath: /actuator/health
+
+    envVars:
+      # supabase = PostgreSQL via Supabase, resend = transactional email.
+      - key: SPRING_PROFILES_ACTIVE
+        value: supabase,resend
+
+      # --- Supabase (Project Settings -> Database) ---------------------------
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_NAME
+        value: postgres
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_SSL_MODE
+        value: require
+      # The free Supabase tier allows few connections; keep each instance modest.
+      - key: DB_POOL_SIZE
+        value: "5"
+
+      # --- Resend (https://resend.com/api-keys) ------------------------------
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        value: SolarUpgrade <orders@auth.cgreglab.space>

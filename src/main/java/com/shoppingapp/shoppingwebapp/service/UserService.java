@@ -15,10 +15,12 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, EmailService emailService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.emailService = emailService;
     }
 
     public User getByEmail(String email) {
@@ -39,6 +41,8 @@ public class UserService {
                 form.getEmail().trim().toLowerCase(),
                 passwordEncoder.encode(form.getPassword()),
                 form.getFullName().trim());
-        return userRepository.save(user);
+        User saved = userRepository.save(user);
+        emailService.sendWelcome(saved);
+        return saved;
     }
 }

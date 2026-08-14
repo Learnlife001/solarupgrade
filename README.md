@@ -21,6 +21,68 @@ account.
 
 Run the tests with `./gradlew build`.
 
+## Deployment
+
+The app is a server-rendered monolith: one Spring Boot process renders the HTML
+and handles the cart and orders. It deploys as a single service.
+
+| Concern | Service | How |
+|---|---|---|
+| Application | **Render** | Docker web service, blueprint in `render.yaml` |
+| Database | **Supabase** | PostgreSQL, `supabase` profile |
+| Email | **Resend** | HTTP API, `resend` profile |
+
+There is deliberately **no Vercel deployment**. Vercel hosts static sites and JS
+serverless functions; it cannot run Spring Boot, and this app has no separate
+frontend to put there. Splitting the Thymeleaf pages into a Next.js app talking
+to a REST API would change that, but it is a rewrite, not a config change.
+
+### 1. Supabase
+
+Create a project (or reuse one) and take the connection details from
+**Project Settings → Database**. Nothing else needs configuring: Flyway creates
+the schema on first boot from `db/migration/postgresql`.
+
+This app manages its own `users` table with BCrypt passwords and **does not use
+Supabase Auth**. The tables live in the `public` schema alongside Supabase's own
+`auth` schema without interfering with it.
+
+### 2. Resend
+
+Verify a sending domain, then create an API key at
+<https://resend.com/api-keys>. `MAIL_FROM` must be an address on that verified
+domain or every send is rejected.
+
+Email is sent over Resend's **HTTP API**, not SMTP — outbound SMTP is commonly
+blocked on hosting platforms, and a blocked port 587 only surfaces as a timeout
+at send time. `application-resend.properties` documents the SMTP alternative if
+you prefer it.
+
+Two emails are sent: a welcome on registration and a confirmation when an order
+is placed. Signing out sends nothing — there is no email involved in ending a
+session.
+
+### 3. Render
+
+Point Render at this repository; it reads `render.yaml`. Set the values marked
+`sync: false` in the dashboard — they are secrets and are deliberately not in
+the file:
+
+| Variable | Where it comes from |
+|---|---|
+| `DB_HOST` | Supabase → Project Settings → Database |
+| `DB_USERNAME` | usually `postgres` |
+| `DB_PASSWORD` | the database password you set |
+| `RESEND_API_KEY` | <https://resend.com/api-keys> |
+
+`SPRING_PROFILES_ACTIVE` is already set to `supabase,resend`. Render injects
+`PORT` and the container binds it; `/actuator/health` gates the deploy.
+
+**Demo data never reaches production.** The seeder that creates
+`demo@solarupgrade.example` is gated on `app.seed-demo-data`, which is true only
+in the default in-memory configuration and false in every profile that points at
+a real database.
+
 ## History: this codebase was rebuilt
 
 The original application source was lost. `src/main` had been committed as a
@@ -74,10 +136,23 @@ status only once a capture is confirmed.
 of sending when mail is unconfigured. A send failure is caught rather than
 thrown, so it can never roll back an order that was already written.
 
-## Running against MySQL
+## Running against a real database locally
 
-The `mysql` profile reads every value from the environment — no credentials are
-committed:
+Both database profiles read every value from the environment — no credentials
+are committed.
+
+**PostgreSQL / Supabase:**
+
+```bash
+export DB_HOST=... DB_NAME=postgres
+export DB_USERNAME=postgres DB_PASSWORD=...
+SPRING_PROFILES_ACTIVE=supabase ./gradlew bootRun
+```
+
+Against a local Postgres rather than Supabase, add `DB_SSL_MODE=disable`;
+Supabase itself requires `require`, which is the default.
+
+**MySQL:**
 
 ```bash
 export DB_HOST=localhost DB_NAME=solarupgrade
@@ -108,17 +183,18 @@ Migrations are per-dialect, selected by the `{vendor}` placeholder in
 
 ```
 src/main/resources/db/migration/
-  h2/V1__initial_schema.sql      <- local development and tests
-  mysql/V1__initial_schema.sql   <- the mysql profile
+  h2/V1__initial_schema.sql          <- local development and tests
+  postgresql/V1__initial_schema.sql  <- the supabase profile
+  mysql/V1__initial_schema.sql       <- the mysql profile
 ```
 
-Two files rather than one because the dialects genuinely disagree: H2 wants
-`TIMESTAMP(6) WITH TIME ZONE` and `NUMERIC` where MySQL wants `DATETIME(6)` and
-`DECIMAL`, and the identity syntax differs. Both were generated from the
-entities using Hibernate's own schema export, not written by hand, so the column
-types match what `validate` expects.
+One file per dialect because they genuinely disagree: H2 and PostgreSQL want
+`TIMESTAMP(6) WITH TIME ZONE` and `NUMERIC`, where MySQL wants `DATETIME(6)` and
+`DECIMAL`, and the identity syntax differs again. All three were generated from
+the entities using Hibernate's own schema export, not written by hand, so the
+column types match what `validate` expects.
 
-**To change the schema**, add a new numbered file to *both* directories — never
+**To change the schema**, add a new numbered file to *every* directory — never
 edit an applied migration, since Flyway checksums them and will refuse to run:
 
 ```
@@ -128,10 +204,11 @@ V2__add_product_sku.sql
 Then run `./gradlew build`. If the change doesn't match the entities, `validate`
 fails and tells you which column is wrong.
 
-Both baselines have been run for real: the H2 one on every test, and the MySQL
-one against MySQL 8.0.46, where Flyway applied it, `validate` accepted every
-column, and a full registration-to-checkout flow persisted correctly
-(`datetime(6)` precision and `decimal(10,2)` money both intact).
+All three baselines have been run for real, not just written: H2 on every test,
+MySQL against 8.0.46, and PostgreSQL against 16.13. In each case Flyway applied
+the migration, `validate` accepted every column, and a full
+registration-to-checkout flow persisted correctly with exact `NUMERIC`/`DECIMAL`
+money and full timestamp precision.
 
 ## Layout
 

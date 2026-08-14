@@ -27,10 +27,12 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     runtimeOnly 'com.mysql:mysql-connector-j'
     runtimeOnly 'com.h2database:h2'
+    runtimeOnly 'org.postgresql:postgresql'
 
     // Schema migrations. flyway-mysql is a separate module from Flyway 10 on.
     implementation 'org.flywaydb:flyway-core'
     runtimeOnly 'org.flywaydb:flyway-mysql'
+    runtimeOnly 'org.flywaydb:flyway-database-postgresql'
 
     // Security, validation, mail and ops
     implementation 'org.springframework.boot:spring-boot-starter-security'

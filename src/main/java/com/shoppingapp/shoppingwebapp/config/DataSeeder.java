@@ -8,23 +8,26 @@ import com.shoppingapp.shoppingwebapp.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * Populates the in-memory database for local development and tests.
+ * Populates the database with demo data for local development and tests.
  *
- * <p>Excluded from the "mysql" profile: a real deployment should own its schema
- * through migrations and its data through the admin UI, not through a seeder
- * that ships a known demo password.
+ * <p>Gated on an explicit flag rather than a list of excluded profiles. This
+ * seeder creates an account with a password that is published in the README, so
+ * it must never run against a real deployment; {@code app.seed-demo-data} is
+ * true only in the default (H2) configuration and false in every profile that
+ * points at a real database. An opt-in flag fails closed when a new profile is
+ * added, where "not this one profile" silently failed open.
  */
 @Configuration
-@Profile("!mysql")
+@ConditionalOnProperty(name = "app.seed-demo-data", havingValue = "true")
 public class DataSeeder {
 
     private static final Logger log = LoggerFactory.getLogger(DataSeeder.class);
