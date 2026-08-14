@@ -17,19 +17,23 @@
     <p class="flash error" th:if="${param.error}">Wrong email or password.</p>
     <p class="flash" th:if="${param.logout}">You have been signed out.</p>
 
-    <form th:action="@{/login}" method="post">
-        <label>
-            Email
-            <input type="email" name="username" autocomplete="username" required>
-        </label>
-        <label>
-            Password
-            <input type="password" name="password" autocomplete="current-password" required>
-        </label>
-        <button type="submit" class="button-primary">Sign in</button>
-    </form>
+    <section class="panel">
+        <form th:action="@{/login}" method="post">
+            <label>
+                Email
+                <input type="email" name="username" autocomplete="username" required>
+            </label>
+            <label>
+                Password
+                <input type="password" name="password" autocomplete="current-password" required>
+            </label>
+            <button type="submit" class="button-primary button-block">Sign in</button>
+        </form>
+    </section>
 
-    <p>No account? <a th:href="@{/register}">Register</a>.</p>
+    <p class="note" style="margin-top:1.25rem">
+        No account? <a th:href="@{/register}">Register</a>.
+    </p>
 </main>
 
 <div th:replace="~{fragments/layout :: footer}"></div>

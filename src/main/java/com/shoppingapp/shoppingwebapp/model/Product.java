@@ -15,6 +15,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
+import java.util.Locale;
 
 @Entity
 @Table(name = "products")
@@ -71,6 +72,17 @@ public class Product {
 
     public boolean isInStock() {
         return stock > 0;
+    }
+
+    /**
+     * Artwork for the views. Falls back to the category illustration when a
+     * product has no image of its own, so the catalogue never renders a gap.
+     */
+    public String getImage() {
+        if (imageUrl != null && !imageUrl.isBlank()) {
+            return imageUrl;
+        }
+        return "/images/" + category.name().toLowerCase(Locale.ROOT) + ".svg";
     }
 
     public Long getId() {

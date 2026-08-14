@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Battery storage">
+  <defs>
+    <linearGradient id="batBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#eef5f1"/>
+      <stop offset="100%" stop-color="#dce9e2"/>
+    </linearGradient>
+    <linearGradient id="batBody" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="70%" stop-color="#eaeff2"/>
+      <stop offset="100%" stop-color="#cdd7dd"/>
+    </linearGradient>
+    <linearGradient id="batFill" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#16a34a"/>
+      <stop offset="100%" stop-color="#4ade80"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="400" height="300" fill="url(#batBg)"/>
+  <ellipse cx="200" cy="258" rx="86" ry="12" fill="#0d1b2a" opacity=".12"/>
+
+  <!-- module -->
+  <rect x="136" y="44" width="128" height="206" rx="18" fill="url(#batBody)" stroke="#b9c4cb" stroke-width="2"/>
+  <rect x="136" y="44" width="128" height="34" rx="18" fill="#dfe6ea"/>
+  <rect x="136" y="66" width="128" height="12" fill="#dfe6ea"/>
+
+  <!-- charge column -->
+  <rect x="160" y="96" width="34" height="130" rx="9" fill="#e3e9ed" stroke="#c6d0d6" stroke-width="1.5"/>
+  <rect x="164" y="126" width="26" height="96" rx="6" fill="url(#batFill)"/>
+
+  <!-- level marks -->
+  <g fill="#0d1b2a" opacity=".35">
+    <rect x="206" y="104" width="34" height="6" rx="3"/>
+    <rect x="206" y="124" width="26" height="6" rx="3"/>
+    <rect x="206" y="144" width="30" height="6" rx="3"/>
+  </g>
+
+  <!-- bolt badge -->
+  <circle cx="223" cy="196" r="26" fill="#16a34a" opacity=".12"/>
+  <path d="M228 178l-16 24h11l-4 18 17-25h-11z" fill="#16a34a"/>
+
+  <!-- feet -->
+  <g fill="#9aa8b2">
+    <rect x="152" y="250" width="18" height="10" rx="4"/>
+    <rect x="230" y="250" width="18" height="10" rx="4"/>
+  </g>
+</svg>

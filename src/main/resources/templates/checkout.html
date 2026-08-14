@@ -14,36 +14,36 @@
     <h1>Checkout</h1>
 
     <div class="checkout-layout">
-        <section class="checkout-form">
+        <section class="panel">
             <h2>Delivery details</h2>
 
             <form th:action="@{/checkout}" th:object="${checkoutForm}" method="post">
                 <label>
                     Name
-                    <input type="text" th:field="*{shippingName}">
+                    <input type="text" th:field="*{shippingName}" autocomplete="name">
                     <span class="field-error" th:if="${#fields.hasErrors('shippingName')}"
                           th:errors="*{shippingName}">error</span>
                 </label>
 
                 <label>
                     Address
-                    <textarea rows="3" th:field="*{shippingAddress}"></textarea>
+                    <textarea rows="3" th:field="*{shippingAddress}" autocomplete="street-address"></textarea>
                     <span class="field-error" th:if="${#fields.hasErrors('shippingAddress')}"
                           th:errors="*{shippingAddress}">error</span>
                 </label>
 
                 <label>
                     Postcode
-                    <input type="text" th:field="*{shippingPostcode}">
+                    <input type="text" th:field="*{shippingPostcode}" autocomplete="postal-code">
                     <span class="field-error" th:if="${#fields.hasErrors('shippingPostcode')}"
                           th:errors="*{shippingPostcode}">error</span>
                 </label>
 
-                <button type="submit" class="button-primary">Place order</button>
+                <button type="submit" class="button-primary button-block">Place order</button>
             </form>
         </section>
 
-        <aside class="order-review">
+        <aside class="panel">
             <h2>Order review</h2>
             <ul class="review-lines">
                 <li th:each="item : ${items}">

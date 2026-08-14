@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>SolarUpgrade</title>
+    <title>SolarUpgrade &mdash; home solar, storage and EV charging</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
@@ -12,19 +12,55 @@
 
 <main class="container">
     <section class="hero">
-        <h1>Upgrade your home to solar</h1>
-        <p>Panels, inverters, storage and EV charging &mdash; everything for a domestic install.</p>
-        <a class="button-primary" th:href="@{/products}">Browse the catalogue</a>
+        <div>
+            <span class="eyebrow">Domestic solar</span>
+            <h1>Upgrade your home to solar</h1>
+            <p>
+                Panels, inverters, battery storage, mounting and EV charging &mdash;
+                everything for a domestic install, from one place.
+            </p>
+            <div class="hero-actions">
+                <a class="button-primary" th:href="@{/products}">Browse the catalogue</a>
+                <a class="button-secondary" th:href="@{/products(category='BATTERY')}">See battery storage</a>
+            </div>
+        </div>
+        <div class="hero-art">
+            <img th:src="@{/images/hero.svg}" alt="A house with solar panels across its roof on a sunny day">
+        </div>
     </section>
 
-    <h2>Featured</h2>
+    <div class="trust-strip">
+        <div class="trust-item">
+            <strong>25-year panel warranty</strong>
+            <span>On every monocrystalline module we stock.</span>
+        </div>
+        <div class="trust-item">
+            <strong>Battery-ready inverters</strong>
+            <span>Add storage now or later without replacing the inverter.</span>
+        </div>
+        <div class="trust-item">
+            <strong>Full mounting kits</strong>
+            <span>Rails, clamps and hooks matched to your roof type.</span>
+        </div>
+    </div>
+
+    <div class="section-head">
+        <h2>Featured products</h2>
+        <p><a th:href="@{/products}">View all</a></p>
+    </div>
+
     <div class="product-grid">
         <article class="product-card" th:each="product : ${products}">
-            <h3>
-                <a th:href="@{/products/{id}(id=${product.id})}" th:text="${product.name}">Product</a>
-            </h3>
-            <p class="category" th:text="${product.category.displayName}">Category</p>
-            <p class="price">&pound;<span th:text="${#numbers.formatDecimal(product.price, 1, 2)}">0.00</span></p>
+            <a class="product-thumb" th:href="@{/products/{id}(id=${product.id})}">
+                <img th:src="@{${product.image}}" th:alt="${product.name}">
+            </a>
+            <div class="product-body">
+                <p class="category" th:text="${product.category.displayName}">Category</p>
+                <h3>
+                    <a th:href="@{/products/{id}(id=${product.id})}" th:text="${product.name}">Product</a>
+                </h3>
+                <p class="price">&pound;<span th:text="${#numbers.formatDecimal(product.price, 1, 2)}">0.00</span></p>
+            </div>
         </article>
     </div>
 </main>

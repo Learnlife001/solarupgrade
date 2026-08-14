@@ -13,36 +13,40 @@
 <main class="container narrow">
     <h1>Create an account</h1>
 
-    <form th:action="@{/register}" th:object="${registrationForm}" method="post">
-        <label>
-            Full name
-            <input type="text" th:field="*{fullName}">
-            <span class="field-error" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}">error</span>
-        </label>
+    <section class="panel">
+        <form th:action="@{/register}" th:object="${registrationForm}" method="post">
+            <label>
+                Full name
+                <input type="text" th:field="*{fullName}" autocomplete="name">
+                <span class="field-error" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}">error</span>
+            </label>
 
-        <label>
-            Email
-            <input type="email" th:field="*{email}" autocomplete="username">
-            <span class="field-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}">error</span>
-        </label>
+            <label>
+                Email
+                <input type="email" th:field="*{email}" autocomplete="username">
+                <span class="field-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}">error</span>
+            </label>
 
-        <label>
-            Password
-            <input type="password" th:field="*{password}" autocomplete="new-password">
-            <span class="field-error" th:if="${#fields.hasErrors('password')}" th:errors="*{password}">error</span>
-        </label>
+            <label>
+                Password
+                <input type="password" th:field="*{password}" autocomplete="new-password">
+                <span class="field-error" th:if="${#fields.hasErrors('password')}" th:errors="*{password}">error</span>
+            </label>
 
-        <label>
-            Confirm password
-            <input type="password" th:field="*{confirmPassword}" autocomplete="new-password">
-            <span class="field-error" th:if="${#fields.hasErrors('confirmPassword')}"
-                  th:errors="*{confirmPassword}">error</span>
-        </label>
+            <label>
+                Confirm password
+                <input type="password" th:field="*{confirmPassword}" autocomplete="new-password">
+                <span class="field-error" th:if="${#fields.hasErrors('confirmPassword')}"
+                      th:errors="*{confirmPassword}">error</span>
+            </label>
 
-        <button type="submit" class="button-primary">Register</button>
-    </form>
+            <button type="submit" class="button-primary button-block">Register</button>
+        </form>
+    </section>
 
-    <p>Already registered? <a th:href="@{/login}">Sign in</a>.</p>
+    <p class="note" style="margin-top:1.25rem">
+        Already registered? <a th:href="@{/login}">Sign in</a>.
+    </p>
 </main>
 
 <div th:replace="~{fragments/layout :: footer}"></div>

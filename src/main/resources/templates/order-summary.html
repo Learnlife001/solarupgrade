@@ -12,8 +12,11 @@
 
 <main class="container">
     <div class="banner success" th:if="${justPlaced}">
-        <h2>Thank you &mdash; your order is in.</h2>
-        <p>We have emailed a confirmation to your account address.</p>
+        <span class="banner-tick" aria-hidden="true">&#10003;</span>
+        <div>
+            <h2>Thank you &mdash; your order is in</h2>
+            <p>We have emailed a confirmation to your account address.</p>
+        </div>
     </div>
 
     <h1>Order #<span th:text="${order.id}">0</span></h1>
@@ -22,7 +25,11 @@
         <dt>Placed</dt>
         <dd th:text="${order.placedAtDisplay}">date</dd>
         <dt>Status</dt>
-        <dd th:text="${order.status.displayName}">status</dd>
+        <dd>
+            <span class="status-pill"
+                  th:classappend="${order.status.name() == 'PAID'} ? 'paid'"
+                  th:text="${order.status.displayName}">status</span>
+        </dd>
         <dt>Delivering to</dt>
         <dd>
             <span th:text="${order.shippingName}">name</span><br>
@@ -31,30 +38,32 @@
         </dd>
     </dl>
 
-    <table class="line-items">
-        <thead>
-        <tr>
-            <th>Product</th>
-            <th>Unit price</th>
-            <th>Quantity</th>
-            <th>Line total</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="item : ${order.items}">
-            <td th:text="${item.productName}">Product</td>
-            <td>&pound;<span th:text="${#numbers.formatDecimal(item.unitPrice, 1, 2)}">0.00</span></td>
-            <td th:text="${item.quantity}">1</td>
-            <td>&pound;<span th:text="${#numbers.formatDecimal(item.lineTotal, 1, 2)}">0.00</span></td>
-        </tr>
-        </tbody>
-        <tfoot>
-        <tr>
-            <th colspan="3">Total</th>
-            <th>&pound;<span th:text="${#numbers.formatDecimal(order.total, 1, 2)}">0.00</span></th>
-        </tr>
-        </tfoot>
-    </table>
+    <div class="table-wrap">
+        <table class="line-items">
+            <thead>
+            <tr>
+                <th>Product</th>
+                <th class="num">Unit price</th>
+                <th class="num">Quantity</th>
+                <th class="num">Line total</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="item : ${order.items}">
+                <td th:text="${item.productName}">Product</td>
+                <td class="num">&pound;<span th:text="${#numbers.formatDecimal(item.unitPrice, 1, 2)}">0.00</span></td>
+                <td class="num" th:text="${item.quantity}">1</td>
+                <td class="num">&pound;<span th:text="${#numbers.formatDecimal(item.lineTotal, 1, 2)}">0.00</span></td>
+            </tr>
+            </tbody>
+            <tfoot>
+            <tr>
+                <th colspan="3">Total</th>
+                <th class="num">&pound;<span th:text="${#numbers.formatDecimal(order.total, 1, 2)}">0.00</span></th>
+            </tr>
+            </tfoot>
+        </table>
+    </div>
 
     <!--
       Stand-in for payment capture. A PayPal Orders API integration replaces this
@@ -67,7 +76,7 @@
         <span class="note">Placeholder &mdash; no payment provider is wired up yet.</span>
     </form>
 
-    <p><a th:href="@{/orders}">&larr; All orders</a></p>
+    <p style="margin-top:2rem"><a th:href="@{/orders}">&larr; All orders</a></p>
 </main>
 
 <div th:replace="~{fragments/layout :: footer}"></div>

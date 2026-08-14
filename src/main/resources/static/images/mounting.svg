@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Mounting and racking">
+  <defs>
+    <linearGradient id="mntBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#eef5f1"/>
+      <stop offset="100%" stop-color="#dce9e2"/>
+    </linearGradient>
+    <linearGradient id="mntRail" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f2f5f7"/>
+      <stop offset="45%" stop-color="#c8d2d8"/>
+      <stop offset="100%" stop-color="#9fadb6"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="400" height="300" fill="url(#mntBg)"/>
+
+  <!-- roof plane -->
+  <path d="M40 214L200 138l160 76-160 62z" fill="#b4483c" opacity=".22"/>
+  <path d="M40 214L200 138l160 76" fill="none" stroke="#b4483c" stroke-opacity=".45" stroke-width="2"/>
+
+  <!-- tiles hint -->
+  <g stroke="#b4483c" stroke-opacity=".3" stroke-width="1.5" fill="none">
+    <path d="M93 232l160-76M146 250l160-76"/>
+  </g>
+
+  <!-- rails -->
+  <g>
+    <path d="M86 196l150-70 14 7-150 70z" fill="url(#mntRail)" stroke="#8d9ba4" stroke-width="1.5"/>
+    <path d="M132 226l150-70 14 7-150 70z" fill="url(#mntRail)" stroke="#8d9ba4" stroke-width="1.5"/>
+  </g>
+
+  <!-- clamps -->
+  <g fill="#7f8d97">
+    <rect x="104" y="176" width="16" height="18" rx="4" transform="rotate(-25 112 185)"/>
+    <rect x="176" y="142" width="16" height="18" rx="4" transform="rotate(-25 184 151)"/>
+    <rect x="150" y="206" width="16" height="18" rx="4" transform="rotate(-25 158 215)"/>
+    <rect x="222" y="172" width="16" height="18" rx="4" transform="rotate(-25 230 181)"/>
+  </g>
+
+  <!-- roof hooks -->
+  <g stroke="#6c7a84" stroke-width="5" stroke-linecap="round" fill="none">
+    <path d="M112 196l-8 12M184 162l-8 12M158 226l-8 12M230 192l-8 12"/>
+  </g>
+
+  <!-- bolt detail -->
+  <g fill="#5f6d77">
+    <circle cx="112" cy="186" r="3.2"/>
+    <circle cx="184" cy="152" r="3.2"/>
+    <circle cx="158" cy="216" r="3.2"/>
+    <circle cx="230" cy="182" r="3.2"/>
+  </g>
+</svg>

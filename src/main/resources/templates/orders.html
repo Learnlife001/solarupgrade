@@ -13,30 +13,37 @@
 <main class="container">
     <h1>My orders</h1>
 
-    <p class="empty" th:if="${#lists.isEmpty(orders)}">
-        You have not placed any orders yet. <a th:href="@{/products}">Browse the shop</a>.
-    </p>
+    <div class="empty-state" th:if="${#lists.isEmpty(orders)}">
+        <h2>No orders yet</h2>
+        <p>When you place an order it will appear here. <a th:href="@{/products}">Browse the shop</a>.</p>
+    </div>
 
-    <table class="line-items" th:unless="${#lists.isEmpty(orders)}">
-        <thead>
-        <tr>
-            <th>Order</th>
-            <th>Placed</th>
-            <th>Items</th>
-            <th>Total</th>
-            <th>Status</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="order : ${orders}">
-            <td><a th:href="@{/orders/{id}(id=${order.id})}">#<span th:text="${order.id}">0</span></a></td>
-            <td th:text="${order.placedAtShortDisplay}">date</td>
-            <td th:text="${order.itemCount}">0</td>
-            <td>&pound;<span th:text="${#numbers.formatDecimal(order.total, 1, 2)}">0.00</span></td>
-            <td th:text="${order.status.displayName}">status</td>
-        </tr>
-        </tbody>
-    </table>
+    <div class="table-wrap" th:unless="${#lists.isEmpty(orders)}">
+        <table class="line-items">
+            <thead>
+            <tr>
+                <th>Order</th>
+                <th>Placed</th>
+                <th class="num">Items</th>
+                <th class="num">Total</th>
+                <th>Status</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="order : ${orders}">
+                <td><a th:href="@{/orders/{id}(id=${order.id})}">#<span th:text="${order.id}">0</span></a></td>
+                <td th:text="${order.placedAtShortDisplay}">date</td>
+                <td class="num" th:text="${order.itemCount}">0</td>
+                <td class="num">&pound;<span th:text="${#numbers.formatDecimal(order.total, 1, 2)}">0.00</span></td>
+                <td>
+                    <span class="status-pill"
+                          th:classappend="${order.status.name() == 'PAID'} ? 'paid'"
+                          th:text="${order.status.displayName}">status</span>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
 </main>
 
 <div th:replace="~{fragments/layout :: footer}"></div>

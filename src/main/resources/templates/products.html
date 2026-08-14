@@ -11,14 +11,17 @@
 <div th:replace="~{fragments/layout :: header}"></div>
 
 <main class="container">
-    <h1>Shop</h1>
+    <div class="section-head">
+        <h1>Shop</h1>
+        <p><span th:text="${#lists.size(products)}">0</span> products</p>
+    </div>
 
     <form class="search-form" th:action="@{/products}" method="get">
-        <input type="search" name="q" th:value="${query}" placeholder="Search products">
+        <input type="search" name="q" th:value="${query}" placeholder="Search panels, inverters, batteries" aria-label="Search products">
         <button type="submit" class="button-primary">Search</button>
     </form>
 
-    <nav class="category-filter">
+    <nav class="category-filter" aria-label="Filter by category">
         <a th:href="@{/products}" th:classappend="${selectedCategory == null} ? 'active'">All</a>
         <a th:each="cat : ${allCategories}"
            th:href="@{/products(category=${cat})}"
@@ -26,16 +29,27 @@
            th:classappend="${selectedCategory != null and selectedCategory.name() == cat.name()} ? 'active'">Category</a>
     </nav>
 
-    <p th:if="${#lists.isEmpty(products)}" class="empty">No products matched.</p>
+    <div class="empty-state" th:if="${#lists.isEmpty(products)}">
+        <h2>Nothing matched</h2>
+        <p>Try a different search, or <a th:href="@{/products}">browse everything</a>.</p>
+    </div>
 
     <div class="product-grid">
         <article class="product-card" th:each="product : ${products}">
-            <h3>
-                <a th:href="@{/products/{id}(id=${product.id})}" th:text="${product.name}">Product</a>
-            </h3>
-            <p class="category" th:text="${product.category.displayName}">Category</p>
-            <p class="price">&pound;<span th:text="${#numbers.formatDecimal(product.price, 1, 2)}">0.00</span></p>
-            <p class="stock out-of-stock" th:unless="${product.inStock}">Out of stock</p>
+            <a class="product-thumb" th:href="@{/products/{id}(id=${product.id})}">
+                <img th:src="@{${product.image}}" th:alt="${product.name}">
+            </a>
+            <div class="product-body">
+                <p class="category" th:text="${product.category.displayName}">Category</p>
+                <h3>
+                    <a th:href="@{/products/{id}(id=${product.id})}" th:text="${product.name}">Product</a>
+                </h3>
+                <p class="price">&pound;<span th:text="${#numbers.formatDecimal(product.price, 1, 2)}">0.00</span></p>
+                <span class="badge out" th:unless="${product.inStock}">Out of stock</span>
+                <span class="badge low" th:if="${product.inStock and product.stock &lt; 10}"
+                      th:text="'Only ' + ${product.stock} + ' left'">Low stock</span>
+                <span class="badge in" th:if="${product.stock >= 10}">In stock</span>
+            </div>
         </article>
     </div>
 </main>

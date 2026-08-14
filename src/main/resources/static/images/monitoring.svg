@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Monitoring">
+  <defs>
+    <linearGradient id="monBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#eef5f1"/>
+      <stop offset="100%" stop-color="#dce9e2"/>
+    </linearGradient>
+    <linearGradient id="monArea" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4ade80" stop-opacity=".55"/>
+      <stop offset="100%" stop-color="#4ade80" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="400" height="300" fill="url(#monBg)"/>
+  <ellipse cx="200" cy="262" rx="96" ry="11" fill="#0d1b2a" opacity=".12"/>
+
+  <!-- device -->
+  <rect x="76" y="52" width="248" height="176" rx="18" fill="#1b2731"/>
+  <rect x="88" y="64" width="224" height="140" rx="10" fill="#0e1720"/>
+
+  <!-- chart grid -->
+  <g stroke="#2b3945" stroke-width="1.5">
+    <path d="M104 96h192M104 128h192M104 160h192"/>
+  </g>
+
+  <!-- generation curve -->
+  <path d="M104 178c24-4 34-30 52-46s30 6 46-14 30-30 48-22 28 34 46 40v42H104z" fill="url(#monArea)"/>
+  <path d="M104 178c24-4 34-30 52-46s30 6 46-14 30-30 48-22 28 34 46 40"
+        fill="none" stroke="#4ade80" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- readout -->
+  <g fill="#e6edf3">
+    <rect x="104" y="76" width="52" height="8" rx="4"/>
+  </g>
+  <g fill="#4ade80">
+    <circle cx="296" cy="80" r="5"/>
+  </g>
+
+  <!-- stand -->
+  <rect x="184" y="228" width="32" height="20" fill="#1b2731"/>
+  <rect x="150" y="246" width="100" height="12" rx="6" fill="#2b3945"/>
+
+  <!-- CT clamp accessory -->
+  <g transform="translate(320 196)">
+    <circle r="20" fill="none" stroke="#7f8d97" stroke-width="7"/>
+    <path d="M-4-26h8v14h-8z" fill="#7f8d97"/>
+  </g>
+</svg>

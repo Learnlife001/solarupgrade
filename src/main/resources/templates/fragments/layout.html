@@ -9,11 +9,14 @@
 -->
 <header th:fragment="header" class="site-header">
     <div class="header-inner">
-        <a class="brand" th:href="@{/}">SolarUpgrade</a>
+        <a class="brand" th:href="@{/}">
+            <span class="brand-mark" aria-hidden="true">&#9728;</span>
+            SolarUpgrade
+        </a>
 
         <nav class="main-nav">
             <a th:href="@{/products}">Shop</a>
-            <a th:href="@{/orders}" sec:authorize="isAuthenticated()">My orders</a>
+            <a th:href="@{/orders}" sec:authorize="isAuthenticated()">Orders</a>
         </nav>
 
         <div class="header-actions">
@@ -23,13 +26,13 @@
             </a>
 
             <span sec:authorize="isAuthenticated()" class="account">
-                <span sec:authentication="name">user</span>
+                <span class="account-name" sec:authentication="name">user</span>
                 <form th:action="@{/logout}" method="post" class="inline-form">
                     <button type="submit" class="link-button">Sign out</button>
                 </form>
             </span>
 
-            <span sec:authorize="!isAuthenticated()">
+            <span sec:authorize="!isAuthenticated()" class="account">
                 <a th:href="@{/login}">Sign in</a>
                 <a class="button-secondary" th:href="@{/register}">Register</a>
             </span>
@@ -38,7 +41,7 @@
 </header>
 
 <footer th:fragment="footer" class="site-footer">
-    <p>SolarUpgrade &mdash; demo storefront rebuilt after source loss.</p>
+    <p>SolarUpgrade &mdash; demo storefront. Prices and stock are sample data.</p>
 </footer>
 
 </body>
