@@ -4,6 +4,11 @@
 FROM eclipse-temurin:21-jdk AS build
 WORKDIR /workspace
 
+# Cap the build JVM. Gradle otherwise sizes its heap against the host's memory
+# rather than the container limit, which on a small CI builder gets the compile
+# killed part-way through with no useful error.
+ENV GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx1024m -Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2"
+
 # Copy the wrapper first so dependency resolution caches independently of
 # source changes.
 COPY gradlew .

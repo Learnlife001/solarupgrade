@@ -1,0 +1,20 @@
+# Keep the build context small and reproducible. Without this, the whole .git
+# history and any local build output are shipped to the builder, which slows
+# the upload and can leak a stale build/ directory into the image.
+
+.git
+.gitattributes
+.gitignore
+
+build/
+.gradle/
+out/
+bin/
+
+.idea/
+.vscode/
+*.iml
+
+.azure/
+README.md
+*.md
