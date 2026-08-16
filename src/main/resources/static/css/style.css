@@ -443,8 +443,21 @@ img { max-width: 100%; display: block; }
 
 label { display: block; margin-bottom: 1rem; font-size: .89rem; font-weight: 600; color: var(--ink-2); }
 
+/* Two fields side by side, stacking on narrow screens. */
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; }
+@media (max-width: 560px) { .field-row { grid-template-columns: 1fr; } }
+
+/* Marks a field as genuinely skippable, so nobody hunts for a postcode that
+   their address does not have. */
+.optional {
+    font-weight: 400;
+    font-size: .82rem;
+    color: var(--ink-2);
+    font-style: italic;
+}
+
 input[type="text"], input[type="email"], input[type="password"],
-input[type="search"], input[type="number"], textarea {
+input[type="search"], input[type="number"], textarea, select {
     display: block;
     width: 100%;
     margin-top: .35rem;
@@ -456,7 +469,8 @@ input[type="search"], input[type="number"], textarea {
     color: var(--ink);
     background: var(--surface);
 }
-input:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visible {
+input:focus-visible, textarea:focus-visible, select:focus-visible,
+button:focus-visible, a:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
 }
@@ -652,6 +666,61 @@ input[type="number"].qty-input { width: 4.6rem; margin-top: 0; }
 .payment-option-body { display: flex; flex-direction: column; gap: .1rem; }
 .payment-option-name { font-weight: 650; font-size: .95rem; }
 .payment-option-note { color: var(--ink-2); font-size: .84rem; }
+
+/* What happens after "Place order". app.js hides every one of these and shows
+   only the selected method's; with no JavaScript they all stay visible, which
+   is wordier but never misleading. */
+.payment-next {
+    margin-top: .5rem;
+    padding-top: .5rem;
+    border-top: 1px dashed var(--line-strong);
+    color: var(--ink-2);
+    font-size: .82rem;
+    line-height: 1.5;
+}
+.payment-next[hidden] { display: none; }
+
+/* --- Order line items ------------------------------------------------------ */
+
+.order-lines { list-style: none; margin: 0 0 1rem; padding: 0; }
+
+.order-line {
+    display: grid;
+    grid-template-columns: 96px 1fr max-content;
+    gap: 1.25rem;
+    align-items: start;
+    padding: 1.25rem 0;
+    border-bottom: 1px solid var(--line);
+}
+.order-line:first-child { border-top: 1px solid var(--line); }
+
+.order-line-art {
+    display: block;
+    border-radius: var(--r-sm);
+    overflow: hidden;
+    background: var(--surface-2);
+}
+.order-line-art img { display: block; width: 100%; height: auto; }
+
+.order-line-detail h3 { margin: .1rem 0 .35rem; font-size: 1.02rem; }
+.order-line-detail h3 a { color: inherit; text-decoration: none; }
+.order-line-detail h3 a:hover { text-decoration: underline; }
+.order-line-detail .description { margin: 0 0 .4rem; font-size: .88rem; color: var(--ink-2); }
+.order-line-unit { margin: 0; font-size: .86rem; color: var(--ink-2); }
+
+.order-line-total { margin: 0; font-weight: 700; font-size: 1.02rem; white-space: nowrap; }
+
+.order-total-row {
+    display: flex;
+    justify-content: space-between;
+    padding: .5rem 0 1.5rem;
+    font-size: 1.1rem;
+}
+
+@media (max-width: 560px) {
+    .order-line { grid-template-columns: 64px 1fr; }
+    .order-line-total { grid-column: 2; }
+}
 
 /* --- Order list items ------------------------------------------------------ */
 

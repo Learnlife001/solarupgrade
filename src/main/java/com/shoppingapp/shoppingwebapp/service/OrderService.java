@@ -63,7 +63,15 @@ public class OrderService {
             throw new IllegalStateException("Cannot place an order with an empty basket");
         }
 
-        Order order = new Order(user, form.getShippingName(), form.getShippingAddress(), form.getShippingPostcode());
+        Order order = new Order(user, form.getShippingName(), form.getShippingLine1());
+        // The optional fields arrive as "" from an untouched input. Store null
+        // rather than a blank string: "no postcode" and "a postcode that is
+        // empty" should not be two different things in the database.
+        order.setShippingLine2(blankToNull(form.getShippingLine2()));
+        order.setShippingCity(form.getShippingCity());
+        order.setShippingState(form.getShippingState());
+        order.setShippingPostcode(blankToNull(form.getShippingPostcode()));
+        order.setShippingCountry(form.getShippingCountry());
         order.setPaymentMethod(form.getPaymentMethod());
 
         for (CartItem cartItem : cartItems) {
@@ -82,6 +90,10 @@ public class OrderService {
         cartService.clear(user);
         emailService.sendOrderConfirmation(saved);
         return saved;
+    }
+
+    private static String blankToNull(String value) {
+        return (value == null || value.isBlank()) ? null : value.trim();
     }
 
     /**

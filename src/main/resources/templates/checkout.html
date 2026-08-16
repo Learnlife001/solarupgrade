@@ -10,35 +10,71 @@
 
     <div class="checkout-layout">
         <section class="panel">
-            <h2>Delivery details</h2>
-
             <form th:action="@{/checkout}" th:object="${checkoutForm}" method="post">
+                <h2>Delivery address</h2>
+
                 <label>
-                    Name
+                    Full name
                     <input type="text" th:field="*{shippingName}" autocomplete="name">
                     <span class="field-error" th:if="${#fields.hasErrors('shippingName')}"
                           th:errors="*{shippingName}">error</span>
                 </label>
 
                 <label>
-                    Address
-                    <textarea rows="3" th:field="*{shippingAddress}" autocomplete="street-address"></textarea>
-                    <span class="field-error" th:if="${#fields.hasErrors('shippingAddress')}"
-                          th:errors="*{shippingAddress}">error</span>
+                    Street address
+                    <input type="text" th:field="*{shippingLine1}" autocomplete="address-line1"
+                           placeholder="House number and street">
+                    <span class="field-error" th:if="${#fields.hasErrors('shippingLine1')}"
+                          th:errors="*{shippingLine1}">error</span>
                 </label>
 
                 <label>
-                    Postcode
-                    <input type="text" th:field="*{shippingPostcode}" autocomplete="postal-code">
-                    <span class="field-error" th:if="${#fields.hasErrors('shippingPostcode')}"
-                          th:errors="*{shippingPostcode}">error</span>
+                    Flat, estate or landmark <span class="optional">optional</span>
+                    <input type="text" th:field="*{shippingLine2}" autocomplete="address-line2">
                 </label>
+
+                <div class="field-row">
+                    <label>
+                        City or town
+                        <input type="text" th:field="*{shippingCity}" autocomplete="address-level2">
+                        <span class="field-error" th:if="${#fields.hasErrors('shippingCity')}"
+                              th:errors="*{shippingCity}">error</span>
+                    </label>
+
+                    <label>
+                        State or region
+                        <input type="text" th:field="*{shippingState}" autocomplete="address-level1">
+                        <span class="field-error" th:if="${#fields.hasErrors('shippingState')}"
+                              th:errors="*{shippingState}">error</span>
+                    </label>
+                </div>
+
+                <div class="field-row">
+                    <!--
+                      Optional on purpose: most Nigerian addresses carry no
+                      postcode in daily use, and requiring one would block a
+                      perfectly correct address.
+                    -->
+                    <label>
+                        Postcode <span class="optional">optional</span>
+                        <input type="text" th:field="*{shippingPostcode}" autocomplete="postal-code">
+                    </label>
+
+                    <label>
+                        Country
+                        <select th:field="*{shippingCountry}" autocomplete="country">
+                            <option th:each="country : ${countries}"
+                                    th:value="${country.code}" th:text="${country.name}">Country</option>
+                        </select>
+                        <span class="field-error" th:if="${#fields.hasErrors('shippingCountry')}"
+                              th:errors="*{shippingCountry}">error</span>
+                    </label>
+                </div>
 
                 <h2 class="section-heading">Payment method</h2>
                 <p class="note">
-                    Choose how to pay. Nothing is charged yet &mdash; card details, bank
-                    details and Klarna approval are handled by the provider after the
-                    order is placed, never on this page.
+                    Nothing is charged on this page. Whichever you pick, you finish
+                    paying on the provider's own secure page and come straight back.
                 </p>
 
                 <span class="field-error" th:if="${#fields.hasErrors('paymentMethod')}"
@@ -51,6 +87,28 @@
                         <span class="payment-option-body">
                             <span class="payment-option-name" th:text="${method.displayName}">Method</span>
                             <span class="payment-option-note" th:text="${method.description}">Description</span>
+                            <!--
+                              What happens next, revealed under the method the
+                              customer picks. app.js shows only the selected
+                              one; without JavaScript all three are visible,
+                              which is wordy but never wrong.
+                            -->
+                            <span class="payment-next" th:switch="${method.name()}">
+                                <span th:case="'CARD'">
+                                    Next: our payment provider's secure page opens, you enter
+                                    your card number there and confirm with the one-time code
+                                    from your bank. The card details never touch this site.
+                                </span>
+                                <span th:case="'PAYPAL'">
+                                    Next: PayPal opens, you sign in and approve the payment,
+                                    then PayPal returns you here.
+                                </span>
+                                <span th:case="'BANK_TRANSFER'">
+                                    Next: you get a one-off account number to transfer to from
+                                    your banking app, or a USSD code to dial. The order is
+                                    confirmed as soon as the transfer lands.
+                                </span>
+                            </span>
                         </span>
                     </label>
                 </fieldset>
@@ -71,7 +129,7 @@
                 <strong>Total</strong>
                 <strong>&pound;<span th:text="${#numbers.formatDecimal(total, 1, 2)}">0.00</span></strong>
             </p>
-            <p class="note">Delivery is included. Payment is captured after the order is placed.</p>
+            <p class="note">Delivery is included. Payment is taken after the order is placed.</p>
         </aside>
     </div>
 </main>

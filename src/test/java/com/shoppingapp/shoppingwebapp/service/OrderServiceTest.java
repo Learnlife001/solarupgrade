@@ -43,8 +43,10 @@ class OrderServiceTest {
     private static CheckoutForm checkoutForm() {
         CheckoutForm form = new CheckoutForm();
         form.setShippingName("Order Tester");
-        form.setShippingAddress("1 Test Street");
-        form.setShippingPostcode("AB1 2CD");
+        form.setShippingLine1("14 Adeola Odeku Street");
+        form.setShippingCity("Victoria Island");
+        form.setShippingState("Lagos");
+        form.setShippingCountry("NG");
         form.setPaymentMethod(PaymentMethod.CARD);
         return form;
     }
@@ -106,11 +108,65 @@ class OrderServiceTest {
     void theChosenPaymentMethodIsRecordedOnTheOrder() {
         cartService.add(user, panel, 1);
         CheckoutForm form = checkoutForm();
-        form.setPaymentMethod(PaymentMethod.KLARNA);
+        form.setPaymentMethod(PaymentMethod.BANK_TRANSFER);
 
         Order order = orderService.placeOrder(user, form);
 
-        assertThat(order.getPaymentMethod()).isEqualTo(PaymentMethod.KLARNA);
+        assertThat(order.getPaymentMethod()).isEqualTo(PaymentMethod.BANK_TRANSFER);
+    }
+
+    @Test
+    void theAddressIsStoredAsFieldsAndRenderedAsLines() {
+        cartService.add(user, panel, 1);
+        CheckoutForm form = checkoutForm();
+        form.setShippingLine2("Flat 3B");
+
+        Order order = orderService.placeOrder(user, form);
+
+        assertThat(order.getShippingLine1()).isEqualTo("14 Adeola Odeku Street");
+        assertThat(order.getShippingCity()).isEqualTo("Victoria Island");
+        assertThat(order.getShippingState()).isEqualTo("Lagos");
+        assertThat(order.getShippingLines())
+                .containsExactly("14 Adeola Odeku Street", "Flat 3B", "Victoria Island", "Lagos", "Nigeria");
+    }
+
+    @Test
+    void anAddressWithNoPostcodeLosesTheLineRatherThanShowingABlankOne() {
+        cartService.add(user, panel, 1);
+
+        // Most Nigerian addresses have no postcode; the label must not end up
+        // with an empty line or a stray separator where one would have been.
+        Order order = orderService.placeOrder(user, checkoutForm());
+
+        // Null, not "": a missing postcode is an absent value, not an empty one.
+        assertThat(order.getShippingPostcode()).isNull();
+        assertThat(order.getShippingLines()).noneMatch(String::isBlank);
+        assertThat(order.getShippingLines()).contains("Victoria Island");
+    }
+
+    @Test
+    void aPostcodeSharesTheCityLineTheWayAnAddressLabelReads() {
+        cartService.add(user, panel, 1);
+        CheckoutForm form = checkoutForm();
+        form.setShippingCity("Leeds");
+        form.setShippingPostcode("LS6 3QB");
+        form.setShippingCountry("GB");
+
+        Order order = orderService.placeOrder(user, form);
+
+        assertThat(order.getShippingLines()).contains("Leeds LS6 3QB");
+    }
+
+    @Test
+    void withdrawnMethodsAreNotOfferedButStillLoadOnOldOrders() {
+        assertThat(PaymentMethod.offered())
+                .containsExactly(PaymentMethod.CARD, PaymentMethod.PAYPAL, PaymentMethod.BANK_TRANSFER);
+
+        // Kept as constants on purpose: an order placed with one of these must
+        // still render rather than throwing on an unknown enum name.
+        assertThat(PaymentMethod.valueOf("KLARNA").isOffered()).isFalse();
+        assertThat(PaymentMethod.valueOf("APPLE_PAY").isOffered()).isFalse();
+        assertThat(PaymentMethod.valueOf("SEPA").isOffered()).isFalse();
     }
 
     @Test

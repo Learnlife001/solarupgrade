@@ -160,11 +160,25 @@ and still works — the form is a real form, the script only intercepts its
 submit. Sending the form's own `FormData` carries Spring Security's hidden
 `_csrf` field along with it, so no token handling is duplicated in JavaScript.
 
-**The payment method is recorded; payment is not taken.** Checkout asks how the
-customer wants to pay — card, PayPal, Apple Pay, SEPA or Klarna — and stores the
-choice on the order. That choice is the half of a payment integration that is
-useful without a provider: it is what the provider must be told at capture time,
-and what support needs to see afterwards.
+**The address is fields, not a textarea.** One block of free text cannot be
+validated, cannot be handed to a courier's API, and cannot be searched or sorted
+afterwards. Line 2 and the postcode are optional on purpose — most Nigerian
+addresses carry no postcode in daily use, so requiring one would block a
+perfectly correct address. A missing optional field is stored as `null`, never
+as `""`: "no postcode" and "an empty postcode" must not be two different things.
+`Order.getShippingLines()` assembles the label, so no view decides the layout.
+
+**The payment method is recorded; payment is not taken.** Checkout offers card,
+PayPal and Nigerian bank transfer, and stores the choice on the order. That
+choice is the half of a payment integration that is useful without a provider:
+it is what the provider must be told at capture time, and what support needs to
+see afterwards. Each option says what happens next, revealed under the one
+selected.
+
+Apple Pay, SEPA and Klarna were withdrawn but survive as `PaymentMethod`
+constants marked not-offered. Deleting them would make Hibernate throw on any
+order already placed with one, turning a historical row into a broken page;
+`PaymentMethod.offered()` is what the checkout renders.
 
 **No card number, IBAN or bank detail is collected anywhere,** and the schema has
 nowhere to put one. Those belong on the provider's own hosted page or embedded
@@ -174,8 +188,20 @@ to type a real one into an app that cannot process or protect it.
 Orders are still created as `PENDING_PAYMENT`, and `OrderService.markPaid` is a
 clearly marked stand-in — the "Pay now" button flips the status without
 contacting anyone. A real integration replaces that method body and the form in
-`order-summary.html`, dispatching on `order.paymentMethod` and flipping the
-status only once a capture is confirmed.
+`order-summary.html`, dispatching on `order.paymentMethod`.
+
+**When it is wired up, only the provider's webhook may call `markPaid`** — never
+the browser coming back from the redirect. A returning browser proves nothing:
+the URL can be typed, replayed, or abandoned after a failed charge. The webhook
+is the only party that knows money actually moved.
+
+**One reminder per unpaid order.** `PaymentReminderJob` chases orders left in
+`PENDING_PAYMENT` past `app.payment-reminders.after-hours`, and records the fact
+on the order row so a restart cannot make it chase the same order twice — an
+unpaid order that emails someone hourly is worse than one that never emails at
+all. Off unless `APP_PAYMENT_REMINDERS_ENABLED=true`; running more than one
+instance would need a lock added here, since two schedulers would otherwise both
+claim the same order.
 
 `PaymentMethod` is nullable on `Order`, because orders placed before the column
 existed have no choice recorded and back-filling one would be inventing data.

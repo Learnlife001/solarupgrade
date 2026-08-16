@@ -14,7 +14,7 @@ class OrderTest {
 
     private static Order order() {
         User user = new User("a@b.example", "hash", "A B");
-        return new Order(user, "A B", "1 Test Street", "AB1 2CD");
+        return new Order(user, "A B", "1 Test Street");
     }
 
     @Test

@@ -120,8 +120,37 @@
     });
   }
 
+  /*
+   * Show only the selected payment method's "what happens next" note.
+   *
+   * The notes are in the markup already, visible to a browser without
+   * JavaScript -- wordy, but never wrong. Hiding them is the enhancement, so
+   * the hiding happens here rather than in the stylesheet: a CSS-only rule
+   * would blank them for everyone and leave a no-JS visitor with nothing.
+   */
+  function enhancePaymentMethods(fieldset) {
+    var options = Array.prototype.slice.call(fieldset.querySelectorAll('.payment-option'));
+    if (!options.length) {
+      return;
+    }
+
+    function refresh() {
+      options.forEach(function (option) {
+        var radio = option.querySelector('input[type="radio"]');
+        var next = option.querySelector('.payment-next');
+        if (next) {
+          next.hidden = !(radio && radio.checked);
+        }
+      });
+    }
+
+    fieldset.addEventListener('change', refresh);
+    refresh();
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('input[type="password"]').forEach(addToggle);
     document.querySelectorAll('form.add-to-cart').forEach(enhanceAddToCart);
+    document.querySelectorAll('.payment-methods').forEach(enhancePaymentMethods);
   });
 })();

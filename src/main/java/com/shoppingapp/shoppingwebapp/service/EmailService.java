@@ -51,6 +51,37 @@ public class EmailService {
     }
 
     /**
+     * The one nudge an unpaid order gets. Sent once per order; see
+     * {@link PaymentReminderJob}.
+     */
+    public void sendPaymentReminder(Order order) {
+        StringBuilder body = new StringBuilder();
+        body.append("Hi ").append(order.getUser().getFullName()).append(",\n\n")
+                .append("Your SolarUpgrade order #").append(order.getId())
+                .append(" is still waiting for payment, so we have not dispatched it yet.\n\n")
+                .append("Here is what is reserved for you:\n\n");
+        for (OrderItem item : order.getItems()) {
+            body.append("  ").append(item.getQuantity()).append(" x ")
+                    .append(item.getProductName())
+                    .append("  £").append(item.getLineTotal())
+                    .append('\n');
+        }
+        body.append("\nTotal: £").append(order.getTotal());
+        if (order.getPaymentMethod() != null) {
+            body.append("\nYou chose to pay by: ").append(order.getPaymentMethod().getDisplayName());
+        }
+        body.append("\n\nFinish paying here:\n")
+                .append("    ").append(baseUrl).append("/orders/").append(order.getId())
+                .append("\n\nIf you have changed your mind, ignore this and the order will lapse. "
+                        + "This is the only reminder we will send.\n");
+
+        send(order.getUser().getEmail(),
+                "Finish your SolarUpgrade order #" + order.getId(),
+                body.toString(),
+                "payment reminder for order " + order.getId());
+    }
+
+    /**
      * Sends the link that turns a new registration into a usable account.
      *
      * <p>Best-effort like the rest: a send failure leaves the account

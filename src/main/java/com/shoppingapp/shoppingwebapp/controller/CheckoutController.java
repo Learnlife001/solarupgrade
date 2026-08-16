@@ -1,6 +1,7 @@
 package com.shoppingapp.shoppingwebapp.controller;
 
 import com.shoppingapp.shoppingwebapp.dto.CheckoutForm;
+import com.shoppingapp.shoppingwebapp.dto.Country;
 import com.shoppingapp.shoppingwebapp.model.Order;
 import com.shoppingapp.shoppingwebapp.model.PaymentMethod;
 import com.shoppingapp.shoppingwebapp.model.User;
@@ -45,7 +46,8 @@ public class CheckoutController {
         }
         model.addAttribute("items", cartService.itemsFor(user));
         model.addAttribute("total", cartService.totalFor(user));
-        model.addAttribute("paymentMethods", PaymentMethod.values());
+        model.addAttribute("paymentMethods", PaymentMethod.offered());
+        model.addAttribute("countries", Country.all());
         return "checkout";
     }
 
@@ -60,7 +62,8 @@ public class CheckoutController {
         if (bindingResult.hasErrors()) {
             model.addAttribute("items", cartService.itemsFor(user));
             model.addAttribute("total", cartService.totalFor(user));
-            model.addAttribute("paymentMethods", PaymentMethod.values());
+            model.addAttribute("paymentMethods", PaymentMethod.offered());
+        model.addAttribute("countries", Country.all());
             return "checkout";
         }
 

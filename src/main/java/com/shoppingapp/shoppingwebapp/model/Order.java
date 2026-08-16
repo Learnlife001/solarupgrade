@@ -22,6 +22,9 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Table is named "orders" because ORDER is a reserved word in SQL.
@@ -58,14 +61,40 @@ public class Order {
     @Column(length = 32)
     private PaymentMethod paymentMethod;
 
+    /**
+     * When the "you have not finished paying" nudge went out. Recorded so the
+     * reminder is sent once and only once -- an unpaid order that mails the
+     * customer every hour is worse than one that never mails at all.
+     */
+    private Instant paymentReminderSentAt;
+
     @Column(nullable = false)
     private String shippingName;
 
+    /*
+     * The address is held as separate fields rather than one block of text.
+     * A single textarea cannot be validated, cannot be handed to a courier's
+     * API, and cannot be sorted or searched on afterwards.
+     *
+     * Line 2 and postcode are nullable because plenty of real addresses have
+     * neither -- most of Nigeria has no postcode in daily use. City and state
+     * are nullable only so that orders placed before this split still load;
+     * the checkout form requires them.
+     */
     @Column(nullable = false)
-    private String shippingAddress;
+    private String shippingLine1;
 
-    @Column(nullable = false)
+    private String shippingLine2;
+
+    private String shippingCity;
+
+    private String shippingState;
+
     private String shippingPostcode;
+
+    /** ISO 3166-1 alpha-2, so it is unambiguous to a courier or a tax rule. */
+    @Column(length = 2)
+    private String shippingCountry;
 
     @Column(nullable = false)
     private Instant placedAt = Instant.now();
@@ -74,11 +103,10 @@ public class Order {
         // required by JPA
     }
 
-    public Order(User user, String shippingName, String shippingAddress, String shippingPostcode) {
+    public Order(User user, String shippingName, String shippingLine1) {
         this.user = user;
         this.shippingName = shippingName;
-        this.shippingAddress = shippingAddress;
-        this.shippingPostcode = shippingPostcode;
+        this.shippingLine1 = shippingLine1;
     }
 
     public void addItem(OrderItem item) {
@@ -128,16 +156,93 @@ public class Order {
         this.paymentMethod = paymentMethod;
     }
 
+    public Instant getPaymentReminderSentAt() {
+        return paymentReminderSentAt;
+    }
+
+    public void markPaymentReminderSent() {
+        this.paymentReminderSentAt = Instant.now();
+    }
+
     public String getShippingName() {
         return shippingName;
     }
 
-    public String getShippingAddress() {
-        return shippingAddress;
+    public String getShippingLine1() {
+        return shippingLine1;
+    }
+
+    public void setShippingLine2(String shippingLine2) {
+        this.shippingLine2 = shippingLine2;
+    }
+
+    public String getShippingLine2() {
+        return shippingLine2;
+    }
+
+    public void setShippingCity(String shippingCity) {
+        this.shippingCity = shippingCity;
+    }
+
+    public String getShippingCity() {
+        return shippingCity;
+    }
+
+    public void setShippingState(String shippingState) {
+        this.shippingState = shippingState;
+    }
+
+    public String getShippingState() {
+        return shippingState;
+    }
+
+    public void setShippingPostcode(String shippingPostcode) {
+        this.shippingPostcode = shippingPostcode;
     }
 
     public String getShippingPostcode() {
         return shippingPostcode;
+    }
+
+    public void setShippingCountry(String shippingCountry) {
+        this.shippingCountry = shippingCountry;
+    }
+
+    public String getShippingCountry() {
+        return shippingCountry;
+    }
+
+    /**
+     * The address as a courier would write it: one entry per line, blanks
+     * dropped. Views render this as separate lines rather than a text blob.
+     */
+    public List<String> getShippingLines() {
+        List<String> lines = new ArrayList<>();
+        addIfPresent(lines, shippingLine1);
+        addIfPresent(lines, shippingLine2);
+        // City and postcode share a line, the way an address label reads.
+        String cityLine = Stream.of(shippingCity, shippingPostcode)
+                .filter(part -> part != null && !part.isBlank())
+                .collect(Collectors.joining(" "));
+        addIfPresent(lines, cityLine);
+        addIfPresent(lines, shippingState);
+        addIfPresent(lines, countryName());
+        return lines;
+    }
+
+    /** Full country name from the stored code, for display. */
+    public String countryName() {
+        if (shippingCountry == null || shippingCountry.isBlank()) {
+            return null;
+        }
+        String name = Locale.of("", shippingCountry).getDisplayCountry(Locale.ENGLISH);
+        return name.isBlank() ? shippingCountry : name;
+    }
+
+    private static void addIfPresent(List<String> lines, String value) {
+        if (value != null && !value.isBlank()) {
+            lines.add(value.trim());
+        }
     }
 
     public Instant getPlacedAt() {
