@@ -108,16 +108,39 @@ public class OrderService {
         return (value == null || value.isBlank()) ? null : value.trim();
     }
 
-    /**
-     * Stands in for capturing payment. Replace the body with a PayPal Orders API
-     * capture call, and only flip the status once the provider confirms.
-     */
+    /** Scoped by user, for the paths where one is signed in. */
     @Transactional
     public Order markPaid(Long orderId, User user) {
-        Order order = getForUser(orderId, user);
-        if (order.getStatus() == OrderStatus.PENDING_PAYMENT) {
-            order.setStatus(OrderStatus.PAID);
+        return markPaid(getForUser(orderId, user));
+    }
+
+    /**
+     * The single place an order becomes PAID, whichever route the news arrived
+     * by -- a capture on the customer's return, a webhook, or the stand-in.
+     *
+     * <p>The status change and the confirmation email are deliberately welded
+     * together here. The alternative, emailing from each caller, is how a
+     * customer ends up with two "payment received" messages when a webhook
+     * arrives just after they refresh the page.
+     *
+     * <p>Both are guarded by the transition itself: an order that is already
+     * paid returns untouched and sends nothing. That is what makes a replayed
+     * webhook harmless.
+     */
+    @Transactional
+    public Order markPaid(Order order) {
+        if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
+            return order;
         }
-        return orderRepository.save(order);
+        order.setStatus(OrderStatus.PAID);
+        Order saved = orderRepository.save(order);
+        // Sent inside the transaction, as the order confirmation is. If the
+        // commit were to fail afterwards the customer would have been told
+        // about a payment the order does not record -- but the money did move,
+        // so the email is not a lie, and the provider's webhook retries until
+        // the record agrees. EmailService never throws, so a mail outage
+        // cannot undo a payment.
+        emailService.sendPaymentReceived(saved);
+        return saved;
     }
 }

@@ -146,8 +146,9 @@ public class PaymentService {
             return;
         }
 
-        order.setStatus(OrderStatus.PAID);
-        orderRepository.save(order);
+        // Through OrderService rather than setting the status here, so the
+        // receipt goes out on this route too and only on the transition.
+        orderService.markPaid(order);
         log.info("Order {} paid via webhook", orderId);
     }
 

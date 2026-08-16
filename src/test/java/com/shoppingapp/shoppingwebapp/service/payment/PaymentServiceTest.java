@@ -11,6 +11,7 @@ import com.shoppingapp.shoppingwebapp.repository.OrderRepository;
 import com.shoppingapp.shoppingwebapp.repository.ProductRepository;
 import com.shoppingapp.shoppingwebapp.repository.UserRepository;
 import com.shoppingapp.shoppingwebapp.service.CartService;
+import com.shoppingapp.shoppingwebapp.service.EmailService;
 import com.shoppingapp.shoppingwebapp.service.OrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -67,6 +69,9 @@ class PaymentServiceTest {
 
     @MockitoBean
     private PayPalClient payPal;
+
+    @MockitoBean
+    private EmailService emailService;
 
     private User user;
     private Product panel;
@@ -229,6 +234,51 @@ class PaymentServiceTest {
     @Test
     void aWebhookForAnUnknownOrderIsIgnoredRatherThanThrowing() {
         paymentService.settleFromWebhook(999_999L, "PP-X", new BigDecimal("1.00"), "EUR");
+    }
+
+    /**
+     * The customer should hear that their money arrived, once. Both routes
+     * settle through the same transition, which is what stops a webhook
+     * landing just after a page refresh producing two receipts.
+     */
+    @Test
+    void payingSendsExactlyOneReceipt() {
+        Order order = paypalOrder();
+        order.setProviderReference("PP-11");
+        orderRepository.save(order);
+        when(payPal.capture("PP-11")).thenReturn(new PayPalClient.Capture(
+                true, "COMPLETED", order.getPaymentAmount(), "EUR"));
+
+        paymentService.completePayPal(order, user);
+        // Then the webhook arrives for the same payment, as it will.
+        paymentService.settleFromWebhook(order.getId(), "PP-11", order.getPaymentAmount(), "EUR");
+
+        verify(emailService, times(1)).sendPaymentReceived(any(Order.class));
+    }
+
+    @Test
+    void aRefusedPaymentSendsNoReceipt() {
+        Order order = paypalOrder();
+        order.setProviderReference("PP-12");
+        orderRepository.save(order);
+        when(payPal.capture("PP-12")).thenReturn(new PayPalClient.Capture(
+                false, "DECLINED", null, null));
+
+        paymentService.completePayPal(order, user);
+
+        verify(emailService, never()).sendPaymentReceived(any(Order.class));
+    }
+
+    @Test
+    void aWebhookOnlySettlementStillSendsTheReceipt() {
+        Order order = paypalOrder();
+        order.setProviderReference("PP-13");
+        orderRepository.save(order);
+
+        // The buyer paid and closed the tab, so only the webhook reports it.
+        paymentService.settleFromWebhook(order.getId(), "PP-13", order.getPaymentAmount(), "EUR");
+
+        verify(emailService, times(1)).sendPaymentReceived(any(Order.class));
     }
 
     @Test

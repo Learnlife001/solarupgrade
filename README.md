@@ -66,9 +66,23 @@ blocked on hosting platforms, and a blocked port 587 only surfaces as a timeout
 at send time. `application-resend.properties` documents the SMTP alternative if
 you prefer it.
 
-Two emails are sent: a welcome on registration and a confirmation when an order
-is placed. Signing out sends nothing — there is no email involved in ending a
-session.
+Four emails are sent:
+
+| When | Email |
+|---|---|
+| Registration | the six-digit verification code |
+| Order placed | what was ordered, still awaiting payment |
+| Payment confirmed | the receipt — what was bought, what was paid, where it is going |
+| 24h unpaid | one reminder, never a second |
+
+Signing out sends nothing — there is no email involved in ending a session.
+
+**The receipt is welded to the status transition.** `OrderService.markPaid` is
+the single place an order becomes `PAID`, whichever route the news arrived by,
+and it sends the receipt there. Emailing from each caller instead is how a
+customer ends up with two receipts when a webhook lands just after they refresh
+the page. Both are guarded by the transition itself: an order already paid
+returns untouched and sends nothing.
 
 ### 3. PayPal
 

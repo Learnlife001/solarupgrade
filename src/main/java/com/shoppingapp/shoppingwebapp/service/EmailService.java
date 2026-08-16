@@ -51,6 +51,48 @@ public class EmailService {
     }
 
     /**
+     * Confirms that the money arrived and the order is going out.
+     *
+     * <p>Sent from {@link OrderService#markPaid(Order)} and only on the actual
+     * transition, so a replayed webhook or a refreshed browser cannot produce
+     * a second copy.
+     */
+    public void sendPaymentReceived(Order order) {
+        StringBuilder body = new StringBuilder();
+        body.append("Hi ").append(order.getUser().getFullName()).append(",\n\n")
+                .append("Your payment has come through and order #").append(order.getId())
+                .append(" is confirmed. Nothing further is needed from you.\n\n")
+                .append("What you have bought:\n\n");
+        for (OrderItem item : order.getItems()) {
+            body.append("  ").append(item.getQuantity()).append(" x ")
+                    .append(item.getProductName())
+                    .append("  ").append(item.getLineTotalDisplay())
+                    .append('\n');
+        }
+        body.append("\nTotal: ").append(order.getTotalDisplay());
+        if (order.isConverted()) {
+            body.append("\nPaid as ").append(order.getChargeDisplay());
+        }
+        if (order.getPaymentMethod() != null) {
+            body.append("\nPaid by: ").append(order.getPaymentMethod().getDisplayName());
+        }
+
+        body.append("\n\nDelivering to:\n")
+                .append("    ").append(order.getShippingName()).append('\n');
+        for (String line : order.getShippingLines()) {
+            body.append("    ").append(line).append('\n');
+        }
+
+        body.append("\nYour order: ").append(baseUrl).append("/orders/").append(order.getId())
+                .append("\n\nWe will email again when it ships. Keep this as your receipt.\n");
+
+        send(order.getUser().getEmail(),
+                "Payment received — SolarUpgrade order #" + order.getId(),
+                body.toString(),
+                "payment receipt for order " + order.getId());
+    }
+
+    /**
      * The one nudge an unpaid order gets. Sent once per order; see
      * {@link PaymentReminderJob}.
      */
