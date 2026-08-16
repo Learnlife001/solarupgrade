@@ -89,7 +89,13 @@ given. Four variables:
 | `PAYPAL_CLIENT_ID` | from the app |
 | `PAYPAL_CLIENT_SECRET` | from the app |
 | `PAYPAL_WEBHOOK_ID` | from the webhook |
-| `PAYPAL_ENV` | `sandbox` or `live` |
+| `PAYPAL_ENV` | exactly `sandbox` or `live` |
+
+`PAYPAL_ENV` is validated at startup and anything else stops the app with the
+offending value named. Guessing sandbox for an unrecognised value would be
+friendlier and much worse: one typo on a production deployment would send real
+customers to the test PayPal, where no money moves and no order ever settles,
+and nothing would say so.
 
 Leave them unset and the app still runs: `PayPalClient` is never registered, the
 method is reported not-live, and the order page falls back to its stand-in

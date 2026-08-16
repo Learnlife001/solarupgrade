@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -54,11 +55,27 @@ public class PayPalClient {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.webhookId = webhookId;
-        String baseUrl = "live".equalsIgnoreCase(env)
-                ? "https://api-m.paypal.com"
-                : "https://api-m.sandbox.paypal.com";
-        this.client = builder.baseUrl(baseUrl).build();
-        log.info("PayPal client configured against {}", baseUrl);
+        this.client = builder.baseUrl(baseUrlFor(env)).build();
+        log.info("PayPal client configured against {}", baseUrlFor(env));
+    }
+
+    /**
+     * Refuses anything that is not exactly sandbox or live.
+     *
+     * <p>Treating unrecognised values as sandbox would be friendlier and much
+     * worse: a production deployment misconfigured by one typo would take real
+     * customers to the test PayPal, where no money moves and no order ever
+     * settles, and nothing would say so. Failing at startup is loud, immediate,
+     * and happens before a single customer sees the site.
+     */
+    static String baseUrlFor(String env) {
+        String value = env == null ? "" : env.trim().toLowerCase(Locale.ROOT);
+        return switch (value) {
+            case "live", "production" -> "https://api-m.paypal.com";
+            case "sandbox" -> "https://api-m.sandbox.paypal.com";
+            default -> throw new IllegalArgumentException(
+                    "app.paypal.env must be 'sandbox' or 'live', not '" + env + "'");
+        };
     }
 
     public boolean canVerifyWebhooks() {
