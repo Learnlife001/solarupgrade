@@ -93,20 +93,34 @@
                               one; without JavaScript all three are visible,
                               which is wordy but never wrong.
                             -->
-                            <span class="payment-next" th:switch="${method.name()}">
-                                <span th:case="'CARD'">
-                                    Next: our payment provider's secure page opens, you enter
-                                    your card number there and confirm with the one-time code
-                                    from your bank. The card details never touch this site.
+                            <span class="payment-next">
+                                <span th:switch="${method.name()}">
+                                    <span th:case="'CARD'">
+                                        Next: our payment provider's secure page opens, you enter
+                                        your card number there and confirm with the one-time code
+                                        from your bank. The card details never touch this site.
+                                    </span>
+                                    <span th:case="'PAYPAL'">
+                                        Next: PayPal opens, you sign in and approve the payment,
+                                        then PayPal returns you here.
+                                    </span>
+                                    <span th:case="'BANK_TRANSFER'">
+                                        Next: you get a one-off account number to transfer to from
+                                        your banking app, or a USSD code to dial. The order is
+                                        confirmed as soon as the transfer lands.
+                                    </span>
                                 </span>
-                                <span th:case="'PAYPAL'">
-                                    Next: PayPal opens, you sign in and approve the payment,
-                                    then PayPal returns you here.
-                                </span>
-                                <span th:case="'BANK_TRANSFER'">
-                                    Next: you get a one-off account number to transfer to from
-                                    your banking app, or a USSD code to dial. The order is
-                                    confirmed as soon as the transfer lands.
+                                <!--
+                                  The figure this method will actually ask for. PayPal
+                                  cannot take naira, so its amount is the euro
+                                  conversion -- shown here rather than sprung on the
+                                  customer once they are already on PayPal's page.
+                                -->
+                                <span class="payment-charge">
+                                    You will be charged
+                                    <strong th:text="${chargeByMethod.get(method)}">0.00</strong>
+                                    <span th:if="${method.name() == 'PAYPAL'}"
+                                          th:text="'(converted at ' + ${nairaPerEuro} + ' to €1)'">rate</span>
                                 </span>
                             </span>
                         </span>
@@ -122,14 +136,18 @@
             <ul class="review-lines">
                 <li th:each="item : ${items}">
                     <span th:text="${item.quantity} + ' x ' + ${item.product.name}">1 x Product</span>
-                    <span>&pound;<span th:text="${#numbers.formatDecimal(item.lineTotal, 1, 2)}">0.00</span></span>
+                    <span><span th:text="${item.lineTotalDisplay}">0.00</span></span>
                 </li>
             </ul>
             <p class="review-total">
                 <strong>Total</strong>
-                <strong>&pound;<span th:text="${#numbers.formatDecimal(total, 1, 2)}">0.00</span></strong>
+                <strong><span th:text="${totalDisplay}">0.00</span></strong>
             </p>
-            <p class="note">Delivery is included. Payment is taken after the order is placed.</p>
+            <p class="note">
+                Delivery is included. Payment is taken after the order is placed.
+                Prices are in naira; PayPal is charged in euro because it cannot
+                take naira.
+            </p>
         </aside>
     </div>
 </main>

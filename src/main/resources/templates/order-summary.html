@@ -57,20 +57,31 @@
                 </h3>
                 <p class="description" th:text="${item.product.description}">Description</p>
                 <p class="order-line-unit">
-                    &pound;<span th:text="${#numbers.formatDecimal(item.unitPrice, 1, 2)}">0.00</span>
+                    <span th:text="${item.unitPriceDisplay}">0.00</span>
                     each &middot; quantity <span th:text="${item.quantity}">1</span>
                 </p>
             </div>
 
             <p class="order-line-total">
-                &pound;<span th:text="${#numbers.formatDecimal(item.lineTotal, 1, 2)}">0.00</span>
+                <span th:text="${item.lineTotalDisplay}">0.00</span>
             </p>
         </li>
     </ul>
 
     <p class="order-total-row">
         <strong>Total</strong>
-        <strong>&pound;<span th:text="${#numbers.formatDecimal(order.total, 1, 2)}">0.00</span></strong>
+        <strong><span th:text="${order.totalDisplay}">0.00</span></strong>
+    </p>
+
+    <!--
+      Shown only when the charge is in another currency. The rate is the one
+      recorded on the order, not today's, so this stays true however long ago
+      the order was placed.
+    -->
+    <p class="note converted-note" th:if="${order.converted}">
+        Charged through PayPal as
+        <strong th:text="${order.chargeDisplay}">€0.00</strong>,
+        converted at <span th:text="${order.exchangeRateDisplay}">₦1,800.00</span> to €1.
     </p>
 
     <!--

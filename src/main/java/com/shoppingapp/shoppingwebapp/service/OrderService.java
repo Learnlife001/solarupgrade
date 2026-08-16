@@ -23,15 +23,18 @@ public class OrderService {
     private final ProductRepository productRepository;
     private final CartService cartService;
     private final EmailService emailService;
+    private final ExchangeRates exchangeRates;
 
     public OrderService(OrderRepository orderRepository,
                         ProductRepository productRepository,
                         CartService cartService,
-                        EmailService emailService) {
+                        EmailService emailService,
+                        ExchangeRates exchangeRates) {
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
         this.cartService = cartService;
         this.emailService = emailService;
+        this.exchangeRates = exchangeRates;
     }
 
     public List<Order> ordersFor(User user) {
@@ -85,6 +88,15 @@ public class OrderService {
             productRepository.save(product);
             order.addItem(new OrderItem(product, cartItem.getQuantity()));
         }
+
+        // Snapshot what the customer will be charged, in the currency their
+        // chosen method can actually take. Done after the lines are added so
+        // the total is final, and stored so a later rate move cannot change
+        // the figure they agreed to.
+        String currency = exchangeRates.currencyFor(form.getPaymentMethod());
+        order.recordCharge(currency,
+                exchangeRates.convert(order.getTotal(), currency),
+                exchangeRates.rateFor(currency));
 
         Order saved = orderRepository.save(order);
         cartService.clear(user);

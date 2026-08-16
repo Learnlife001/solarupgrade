@@ -62,6 +62,10 @@ public class CartItem {
         return product;
     }
 
+    public String getLineTotalDisplay() {
+        return Money.base(getLineTotal());
+    }
+
     public int getQuantity() {
         return quantity;
     }

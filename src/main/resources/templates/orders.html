@@ -42,7 +42,7 @@
                     <p class="note" th:if="${order.paymentMethod != null}"
                        th:text="${order.paymentMethod.displayName}">Payment method</p>
                 </td>
-                <td class="num">&pound;<span th:text="${#numbers.formatDecimal(order.total, 1, 2)}">0.00</span></td>
+                <td class="num"><span th:text="${order.totalDisplay}">0.00</span></td>
                 <td>
                     <span class="status-pill"
                           th:classappend="${order.status.name() == 'PAID'} ? 'paid'"

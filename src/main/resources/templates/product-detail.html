@@ -17,7 +17,7 @@
         <div>
             <p class="category" th:text="${product.category.displayName}">Category</p>
             <h1 th:text="${product.name}">Product</h1>
-            <p class="price large">&pound;<span th:text="${#numbers.formatDecimal(product.price, 1, 2)}">0.00</span></p>
+            <p class="price large"><span th:text="${product.priceDisplay}">0.00</span></p>
 
             <p class="description" th:text="${product.description}">Description</p>
 

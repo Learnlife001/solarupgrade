@@ -63,10 +63,13 @@ public class EmailService {
         for (OrderItem item : order.getItems()) {
             body.append("  ").append(item.getQuantity()).append(" x ")
                     .append(item.getProductName())
-                    .append("  £").append(item.getLineTotal())
+                    .append("  ").append(item.getLineTotalDisplay())
                     .append('\n');
         }
-        body.append("\nTotal: £").append(order.getTotal());
+        body.append("\nTotal: ").append(order.getTotalDisplay());
+        if (order.isConverted()) {
+            body.append("\nCharged through PayPal as ").append(order.getChargeDisplay());
+        }
         if (order.getPaymentMethod() != null) {
             body.append("\nYou chose to pay by: ").append(order.getPaymentMethod().getDisplayName());
         }
@@ -135,11 +138,14 @@ public class EmailService {
         for (OrderItem item : order.getItems()) {
             body.append("  ").append(item.getQuantity()).append(" x ")
                     .append(item.getProductName())
-                    .append("  £").append(item.getLineTotal())
+                    .append("  ").append(item.getLineTotalDisplay())
                     .append('\n');
         }
-        body.append("\nTotal: £").append(order.getTotal())
-                .append("\nStatus: ").append(order.getStatus().getDisplayName())
+        body.append("\nTotal: ").append(order.getTotalDisplay());
+        if (order.isConverted()) {
+            body.append("\nCharged through PayPal as ").append(order.getChargeDisplay());
+        }
+        body.append("\nStatus: ").append(order.getStatus().getDisplayName())
                 .append("\n\nWe will email again when your order ships.\n");
         return body.toString();
     }

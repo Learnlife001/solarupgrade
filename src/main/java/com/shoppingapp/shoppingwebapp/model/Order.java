@@ -61,6 +61,26 @@ public class Order {
     @Column(length = 32)
     private PaymentMethod paymentMethod;
 
+    /*
+     * What the customer will actually be charged, snapshotted when the order
+     * is placed.
+     *
+     * The total above is always naira, computed from the line snapshots. These
+     * three record the conversion, if any, that the chosen payment method
+     * required. They are stored rather than recalculated because the rate can
+     * move between placing an order and paying for it, and the customer must
+     * pay the figure they were quoted.
+     */
+    @Column(length = 3)
+    private String paymentCurrency;
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal paymentAmount;
+
+    /** Naira per unit of paymentCurrency. Null when no conversion happened. */
+    @Column(precision = 18, scale = 8)
+    private BigDecimal exchangeRate;
+
     /**
      * When the "you have not finished paying" nudge went out. Recorded so the
      * reminder is sent once and only once -- an unpaid order that mails the
@@ -154,6 +174,49 @@ public class Order {
 
     public void setPaymentMethod(PaymentMethod paymentMethod) {
         this.paymentMethod = paymentMethod;
+    }
+
+    public void recordCharge(String currency, BigDecimal amount, BigDecimal rate) {
+        this.paymentCurrency = currency;
+        this.paymentAmount = amount;
+        this.exchangeRate = rate;
+    }
+
+    public String getPaymentCurrency() {
+        return paymentCurrency;
+    }
+
+    public BigDecimal getPaymentAmount() {
+        return paymentAmount;
+    }
+
+    public BigDecimal getExchangeRate() {
+        return exchangeRate;
+    }
+
+    /** Naira, always: the shop's own books are kept in one currency. */
+    public String getTotalDisplay() {
+        return Money.base(getTotal());
+    }
+
+    /**
+     * What the customer is charged, in the currency they are charged in.
+     * Falls back to the naira total for orders placed before this was recorded.
+     */
+    public String getChargeDisplay() {
+        return paymentAmount == null
+                ? getTotalDisplay()
+                : Money.format(paymentAmount, paymentCurrency);
+    }
+
+    /** True when the charge is in a different currency from the shop's base. */
+    public boolean isConverted() {
+        return exchangeRate != null;
+    }
+
+    /** The rate this order was actually converted at, not today's. */
+    public String getExchangeRateDisplay() {
+        return exchangeRate == null ? "" : Money.base(exchangeRate);
     }
 
     public Instant getPaymentReminderSentAt() {

@@ -132,6 +132,41 @@ them as a starting point to edit, not as recovered code.
 
 **Prices are `BigDecimal`,** never floating point, so totals stay exact.
 
+**The base currency is the naira.** The catalogue is priced in it, totals are
+computed in it, and the books are kept in it — one currency, so there is never a
+question of what an order was "really" worth.
+
+**PayPal is the exception, and it is charged in euro.** PayPal has no naira
+support, so a naira-only site could not offer it at all. The receiving account is
+a German one, so euro lands there natively instead of being converted twice.
+Card and bank transfer settle through a Nigerian provider and are charged the
+naira figure unchanged.
+
+The checkout states the exact amount each method will ask for, next to that
+method — nobody should pick PayPal and then meet an unexplained number on
+PayPal's own page.
+
+**The converted amount and the rate are stored on the order**, not recalculated
+on the way to the provider. The rate can move between placing an order and
+paying for it, and the customer must be charged what they were quoted; keeping
+the rate as well makes the arithmetic on any past order checkable instead of
+having to be trusted. `Order.exchangeRate` is null when no conversion happened,
+which is what `isConverted()` reads.
+
+The rate itself is a configured constant (`APP_NAIRA_PER_EURO`), not a live
+feed — a real limitation, and a stale one quietly changes what the shop earns on
+every PayPal sale. Swapping in a rates API means changing
+`ExchangeRates.nairaPerEuro()` and nothing else, because every caller already
+snapshots the rate it was handed.
+
+**Money is formatted in `Money`, with `Locale.ROOT`.** The JDK's currency
+formatter follows the server's default locale, so the same order would render
+`₦2,490,000.00` on one host and `₦2.490.000,00` on another. `OrderServiceTest`
+pins this by formatting under `Locale.GERMANY`.
+
+The seeded catalogue prices are placeholders converted at a round rate. Set real
+ones before taking real money.
+
 **Order lines snapshot the product name and price** at purchase time
 (`OrderItem.unitPrice`). Repricing or renaming a catalogue item never rewrites
 the value of an order already placed — `OrderTest` covers this.

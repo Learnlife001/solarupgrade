@@ -80,6 +80,14 @@ public class OrderItem {
         return unitPrice;
     }
 
+    public String getUnitPriceDisplay() {
+        return Money.base(unitPrice);
+    }
+
+    public String getLineTotalDisplay() {
+        return Money.base(getLineTotal());
+    }
+
     public int getQuantity() {
         return quantity;
     }

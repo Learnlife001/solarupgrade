@@ -1,5 +1,6 @@
 package com.shoppingapp.shoppingwebapp.controller;
 
+import com.shoppingapp.shoppingwebapp.model.Money;
 import com.shoppingapp.shoppingwebapp.model.User;
 import com.shoppingapp.shoppingwebapp.service.CartService;
 import com.shoppingapp.shoppingwebapp.service.ProductService;
@@ -33,7 +34,7 @@ public class CartController {
     public String view(Principal principal, Model model) {
         User user = currentUser.require(principal);
         model.addAttribute("items", cartService.itemsFor(user));
-        model.addAttribute("total", cartService.totalFor(user));
+        model.addAttribute("totalDisplay", Money.base(cartService.totalFor(user)));
         return "cart";
     }
 

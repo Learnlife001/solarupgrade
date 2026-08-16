@@ -129,6 +129,11 @@ public class Product {
         this.stock = stock;
     }
 
+    /** Pre-formatted for the views, so no template repeats a format call. */
+    public String getPriceDisplay() {
+        return Money.base(price);
+    }
+
     public String getImageUrl() {
         return imageUrl;
     }

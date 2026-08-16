@@ -54,7 +54,7 @@
                 <h3>
                     <a th:href="@{/products/{id}(id=${product.id})}" th:text="${product.name}">Product</a>
                 </h3>
-                <p class="price">&pound;<span th:text="${#numbers.formatDecimal(product.price, 1, 2)}">0.00</span></p>
+                <p class="price"><span th:text="${product.priceDisplay}">0.00</span></p>
             </div>
         </article>
     </div>

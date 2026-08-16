@@ -4,6 +4,7 @@ import com.shoppingapp.shoppingwebapp.dto.CheckoutForm;
 import com.shoppingapp.shoppingwebapp.model.Order;
 import com.shoppingapp.shoppingwebapp.model.OrderStatus;
 import com.shoppingapp.shoppingwebapp.model.Category;
+import com.shoppingapp.shoppingwebapp.model.Money;
 import com.shoppingapp.shoppingwebapp.model.PaymentMethod;
 import com.shoppingapp.shoppingwebapp.model.Product;
 import com.shoppingapp.shoppingwebapp.model.User;
@@ -16,6 +17,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.Locale;
 import java.util.NoSuchElementException;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,6 +39,9 @@ class OrderServiceTest {
 
     @Autowired
     private ProductRepository productRepository;
+
+    @Autowired
+    private ExchangeRates exchangeRates;
 
     private User user;
     private Product panel;
@@ -167,6 +173,74 @@ class OrderServiceTest {
         assertThat(PaymentMethod.valueOf("KLARNA").isOffered()).isFalse();
         assertThat(PaymentMethod.valueOf("APPLE_PAY").isOffered()).isFalse();
         assertThat(PaymentMethod.valueOf("SEPA").isOffered()).isFalse();
+    }
+
+    @Test
+    void nairaMethodsAreChargedTheNairaTotalUnconverted() {
+        cartService.add(user, panel, 2);
+        CheckoutForm form = checkoutForm();
+        form.setPaymentMethod(PaymentMethod.BANK_TRANSFER);
+
+        Order order = orderService.placeOrder(user, form);
+
+        assertThat(order.getPaymentCurrency()).isEqualTo("NGN");
+        assertThat(order.getPaymentAmount()).isEqualByComparingTo(order.getTotal());
+        assertThat(order.getExchangeRate()).isNull();
+        assertThat(order.isConverted()).isFalse();
+    }
+
+    /**
+     * PayPal has no naira support and the receiving account is German, so a
+     * PayPal order is quoted and charged in euro.
+     */
+    @Test
+    void paypalOrdersAreConvertedToEuroAndTheRateIsKept() {
+        cartService.add(user, panel, 2);
+        CheckoutForm form = checkoutForm();
+        form.setPaymentMethod(PaymentMethod.PAYPAL);
+
+        Order order = orderService.placeOrder(user, form);
+
+        assertThat(order.getTotal()).isEqualByComparingTo("378.00");
+        assertThat(order.getPaymentCurrency()).isEqualTo("EUR");
+        assertThat(order.isConverted()).isTrue();
+        assertThat(order.getExchangeRate()).isEqualByComparingTo(exchangeRates.nairaPerEuro());
+        // The stored charge must be the total divided by the stored rate, so
+        // the arithmetic on a past order can be checked rather than trusted.
+        assertThat(order.getPaymentAmount()).isEqualByComparingTo(
+                order.getTotal().divide(order.getExchangeRate(), 2, RoundingMode.HALF_UP));
+    }
+
+    /**
+     * The point of storing the amount rather than recomputing it: the customer
+     * pays the figure they were quoted, whatever the rate does afterwards.
+     */
+    @Test
+    void theQuotedChargeSurvivesALaterRateChange() {
+        cartService.add(user, panel, 1);
+        CheckoutForm form = checkoutForm();
+        form.setPaymentMethod(PaymentMethod.PAYPAL);
+        Order order = orderService.placeOrder(user, form);
+        BigDecimal quoted = order.getPaymentAmount();
+
+        ExchangeRates doubled = new ExchangeRates(exchangeRates.nairaPerEuro().multiply(new BigDecimal("2")));
+
+        assertThat(doubled.convert(order.getTotal(), "EUR")).isNotEqualByComparingTo(quoted);
+        assertThat(orderService.getForUser(order.getId(), user).getPaymentAmount())
+                .isEqualByComparingTo(quoted);
+    }
+
+    @Test
+    void moneyIsFormattedTheSameWhateverTheHostLocaleIs() {
+        Locale original = Locale.getDefault();
+        try {
+            // German formatting would otherwise turn 1,234.50 into 1.234,50.
+            Locale.setDefault(Locale.GERMANY);
+            assertThat(Money.base(new BigDecimal("2490000"))).isEqualTo("₦2,490,000.00");
+            assertThat(Money.format(new BigDecimal("1383.33"), "EUR")).isEqualTo("€1,383.33");
+        } finally {
+            Locale.setDefault(original);
+        }
     }
 
     @Test

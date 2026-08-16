@@ -680,6 +680,18 @@ input[type="number"].qty-input { width: 4.6rem; margin-top: 0; }
 }
 .payment-next[hidden] { display: none; }
 
+/* The figure this method will actually charge. Stated up front so a customer
+   choosing PayPal is not surprised by a euro amount on PayPal's own page. */
+.payment-charge {
+    display: block;
+    margin-top: .4rem;
+    color: var(--ink);
+    font-size: .84rem;
+}
+.payment-charge strong { font-weight: 700; }
+
+.converted-note { margin: -.75rem 0 1.5rem; }
+
 /* --- Order line items ------------------------------------------------------ */
 
 .order-lines { list-style: none; margin: 0 0 1rem; padding: 0; }
