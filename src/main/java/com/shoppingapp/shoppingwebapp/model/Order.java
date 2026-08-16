@@ -82,6 +82,15 @@ public class Order {
     private BigDecimal exchangeRate;
 
     /**
+     * The provider's own id for this payment -- a PayPal order id, later an
+     * OPay reference. Kept so a webhook arriving out of nowhere can be tied
+     * back to an order, and so support can find the same payment in the
+     * provider's dashboard.
+     */
+    @Column(length = 64)
+    private String providerReference;
+
+    /**
      * When the "you have not finished paying" nudge went out. Recorded so the
      * reminder is sent once and only once -- an unpaid order that mails the
      * customer every hour is worse than one that never mails at all.
@@ -192,6 +201,14 @@ public class Order {
 
     public BigDecimal getExchangeRate() {
         return exchangeRate;
+    }
+
+    public String getProviderReference() {
+        return providerReference;
+    }
+
+    public void setProviderReference(String providerReference) {
+        this.providerReference = providerReference;
     }
 
     /** Naira, always: the shop's own books are kept in one currency. */

@@ -70,7 +70,38 @@ Two emails are sent: a welcome on registration and a confirmation when an order
 is placed. Signing out sends nothing — there is no email involved in ending a
 session.
 
-### 3. Render
+### 3. PayPal
+
+Create an app at <https://developer.paypal.com/dashboard/applications/sandbox>
+(toggle to **Live** for the real one) and copy its **Client ID** and **Secret**.
+
+Then create a webhook on the same app pointing at:
+
+```
+<APP_BASE_URL>/payments/paypal/webhook
+```
+
+subscribed to **PAYMENT.CAPTURE.COMPLETED**, and copy the **webhook id** it is
+given. Four variables:
+
+| Variable | Value |
+|---|---|
+| `PAYPAL_CLIENT_ID` | from the app |
+| `PAYPAL_CLIENT_SECRET` | from the app |
+| `PAYPAL_WEBHOOK_ID` | from the webhook |
+| `PAYPAL_ENV` | `sandbox` or `live` |
+
+Leave them unset and the app still runs: `PayPalClient` is never registered, the
+method is reported not-live, and the order page falls back to its stand-in
+button. Set the first three but not the webhook id and payments still work
+through the return-and-capture path — the webhook endpoint just ignores
+everything, because without the id it cannot tell a genuine notification from a
+forged one.
+
+`APP_BASE_URL` must be the real public address, since it is what the return,
+cancel and webhook URLs are built from.
+
+### 4. Render
 
 Point Render at this repository and choose **Blueprint**; it reads
 `render.yaml` and creates both the database and the web service.
@@ -80,6 +111,7 @@ Point Render at this repository and choose **Blueprint**; it reads
 | Variable | Where it comes from |
 |---|---|
 | `RESEND_API_KEY` | <https://resend.com/api-keys> |
+| `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET` / `PAYPAL_WEBHOOK_ID` | see above |
 
 Everything else is handled: the database credentials come from the managed
 instance via `fromDatabase`, `SPRING_PROFILES_ACTIVE` is set to
@@ -220,15 +252,44 @@ nowhere to put one. Those belong on the provider's own hosted page or embedded
 element. A form here that looked like it took card details would invite someone
 to type a real one into an app that cannot process or protect it.
 
-Orders are still created as `PENDING_PAYMENT`, and `OrderService.markPaid` is a
-clearly marked stand-in — the "Pay now" button flips the status without
-contacting anyone. A real integration replaces that method body and the form in
-`order-summary.html`, dispatching on `order.paymentMethod`.
+**PayPal is integrated.** Choosing it creates a PayPal order for the exact
+amount snapshotted on our order, sends the buyer to PayPal's own page, and
+captures on their return. Card and bank transfer stay on the stand-in until OPay
+is wired up; `PaymentService.isLive` decides which the order page offers, so an
+unconfigured provider degrades to the placeholder rather than to a broken button.
 
-**When it is wired up, only the provider's webhook may call `markPaid`** — never
-the browser coming back from the redirect. A returning browser proves nothing:
-the URL can be typed, replayed, or abandoned after a failed charge. The webhook
-is the only party that knows money actually moved.
+**An order becomes `PAID` only because a provider told us, in an exchange we
+started, that money moved.** The buyer arriving back at the return URL is not
+that — a URL can be typed, bookmarked or replayed. What the return does is
+trigger a capture call; the *capture's response* is the evidence, because we
+made that call ourselves. The webhook is the same evidence by another route, for
+when the buyer closes the tab before returning.
+
+This corrects an earlier note in this file that said only the webhook may settle
+an order. The distinction that matters is not webhook-versus-return, it is
+provider-said-so versus browser-said-so.
+
+Four things are checked before an order is settled, each with a test:
+
+- the capture must report `COMPLETED`
+- the captured amount and currency must match what the order asked for, or the
+  order is refused rather than dispatched
+- a settled order is never captured or settled twice, because providers retry
+  and buyers refresh
+- a webhook carrying a different payment's reference settles nothing
+
+**Webhooks are treated as hostile until PayPal confirms it signed them.** The
+endpoint is open to the internet by necessity, so every body goes to PayPal's
+`verify-webhook-signature` first, and verification that errors counts as
+verification that failed. With `PAYPAL_WEBHOOK_ID` unset there is no way to tell
+genuine from forged, so the endpoint ignores everything — the safe default, not
+a bug. It is exempt from CSRF because a provider has no token to send; the
+exemption is scoped to `/payments/*/webhook` and the signature check stands in
+for it.
+
+**Provider trouble never marks an order paid.** Transport failures are wrapped
+as `PaymentException`, so a DNS failure and a 401 reach the caller the same way
+and both leave the order `PENDING_PAYMENT` with a retry available.
 
 **One reminder per unpaid order.** `PaymentReminderJob` chases orders left in
 `PENDING_PAYMENT` past `app.payment-reminders.after-hours`, and records the fact

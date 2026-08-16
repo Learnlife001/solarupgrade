@@ -65,6 +65,10 @@ public class SecurityConfig {
                                 // Browsers fetch these before any session exists.
                                 "/favicon.svg", "/favicon.ico",
                                 "/h2-console/**").permitAll()
+                        // Server-to-server, so no session ever exists here.
+                        // Authenticity comes from PayPal's own signature check,
+                        // not from being behind a login; see PaymentController.
+                        .requestMatchers("/payments/*/webhook").permitAll()
                         // Only health and info are exposed; see application.properties.
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .anyRequest().authenticated())
@@ -79,7 +83,11 @@ public class SecurityConfig {
                 // The H2 console renders in a frame and posts without a CSRF token.
                 // Both exemptions are scoped to its path and it is only enabled
                 // under the dev profile.
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/h2-console/**"))
+                // Webhooks are exempt because the caller is a payment
+                // provider, which has no CSRF token and no session to forge;
+                // the signature check is what stands in for both. Scoped to
+                // the webhook paths only.
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/h2-console/**", "/payments/*/webhook"))
                 .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
 
         return http.build();

@@ -6,6 +6,10 @@
 <div th:replace="~{fragments/layout :: header}"></div>
 
 <main class="container">
+    <!-- Where the return from PayPal reports what happened. -->
+    <p class="flash" th:if="${message}" th:text="${message}"></p>
+    <p class="flash error" th:if="${error}" th:text="${error}"></p>
+
     <div class="banner success" th:if="${justPlaced}">
         <span class="banner-tick" aria-hidden="true">&#10003;</span>
         <div>
@@ -101,8 +105,15 @@
                               (order.paymentMethod.name() == 'PAYPAL' or order.paymentMethod.name() == 'BANK_TRANSFER')}">
                 Pay now</span>
         </button>
-        <span class="note">Placeholder &mdash; no payment provider is wired up yet, so this
-            just marks the order paid.</span>
+        <span class="note" th:if="${paymentIsLive}">
+            You will be taken to PayPal to pay
+            <strong th:text="${order.chargeDisplay}">€0.00</strong>.
+            This order is only marked paid once PayPal confirms the money moved.
+        </span>
+        <span class="note" th:unless="${paymentIsLive}">
+            Placeholder &mdash; no provider is wired up for this method yet, so this
+            just marks the order paid.
+        </span>
     </form>
 
     <p style="margin-top:2rem"><a th:href="@{/orders}">&larr; All orders</a></p>
