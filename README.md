@@ -145,11 +145,40 @@ enforces that at the database level.
 `OrderService` scope lookups by user, so changing an id in the URL cannot reach
 someone else's data. Both paths have tests.
 
-**Payment is not integrated.** Orders are created as `PENDING_PAYMENT`, and
-`OrderService.markPaid` is a clearly marked stand-in — the "Pay now" button flips
-the status without contacting a provider. A PayPal Orders API integration
-replaces that method body and the form in `order-summary.html`, flipping the
+**The catalogue is public; doing something with it is not.** Every product page
+is readable signed out — price, description, stock and all. Only the basket and
+the checkout require an account, and `ProductControllerTest` pins both halves of
+that split, because the easy mistake is to gate the detail page along with the
+basket.
+
+**Adding to the basket does not leave the page.** `CartController` has two
+handlers on `/cart/add`: the plain one redirects to the basket, and a second,
+selected by the `X-Requested-With` header that `app.js` sets, answers with JSON
+carrying the new basket size. The script updates the header badge in place. A
+browser without JavaScript never sends the header, falls through to the redirect
+and still works — the form is a real form, the script only intercepts its
+submit. Sending the form's own `FormData` carries Spring Security's hidden
+`_csrf` field along with it, so no token handling is duplicated in JavaScript.
+
+**The payment method is recorded; payment is not taken.** Checkout asks how the
+customer wants to pay — card, PayPal, Apple Pay, SEPA or Klarna — and stores the
+choice on the order. That choice is the half of a payment integration that is
+useful without a provider: it is what the provider must be told at capture time,
+and what support needs to see afterwards.
+
+**No card number, IBAN or bank detail is collected anywhere,** and the schema has
+nowhere to put one. Those belong on the provider's own hosted page or embedded
+element. A form here that looked like it took card details would invite someone
+to type a real one into an app that cannot process or protect it.
+
+Orders are still created as `PENDING_PAYMENT`, and `OrderService.markPaid` is a
+clearly marked stand-in — the "Pay now" button flips the status without
+contacting anyone. A real integration replaces that method body and the form in
+`order-summary.html`, dispatching on `order.paymentMethod` and flipping the
 status only once a capture is confirmed.
+
+`PaymentMethod` is nullable on `Order`, because orders placed before the column
+existed have no choice recorded and back-filling one would be inventing data.
 
 **Email is optional.** Spring Boot only creates a `JavaMailSender` when
 `spring.mail.host` is set, so `EmailService` injects it lazily and logs instead
@@ -276,13 +305,15 @@ src/main/resources/
   db/migration/ Flyway migrations, one directory per dialect
   templates/    Thymeleaf pages; fragments/layout.html holds the shared header
   static/css/   stylesheet
+  static/js/    app.js -- progressive enhancement only, never required
 ```
 
 ## Known gaps
 
 These are deliberate and worth picking up next:
 
-- **No payment provider**, as described above.
+- **No payment provider.** The method is chosen and recorded, but nothing is
+  charged; see above.
 - **No admin UI.** The `ADMIN` role exists and is assignable, but nothing uses
   it; products can only be changed through the seeder or directly in the
   database.

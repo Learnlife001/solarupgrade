@@ -4,6 +4,7 @@ import com.shoppingapp.shoppingwebapp.dto.CheckoutForm;
 import com.shoppingapp.shoppingwebapp.model.Order;
 import com.shoppingapp.shoppingwebapp.model.OrderStatus;
 import com.shoppingapp.shoppingwebapp.model.Category;
+import com.shoppingapp.shoppingwebapp.model.PaymentMethod;
 import com.shoppingapp.shoppingwebapp.model.Product;
 import com.shoppingapp.shoppingwebapp.model.User;
 import com.shoppingapp.shoppingwebapp.repository.ProductRepository;
@@ -44,6 +45,7 @@ class OrderServiceTest {
         form.setShippingName("Order Tester");
         form.setShippingAddress("1 Test Street");
         form.setShippingPostcode("AB1 2CD");
+        form.setPaymentMethod(PaymentMethod.CARD);
         return form;
     }
 
@@ -98,6 +100,17 @@ class OrderServiceTest {
 
         assertThatThrownBy(() -> orderService.getForUser(order.getId(), intruder))
                 .isInstanceOf(NoSuchElementException.class);
+    }
+
+    @Test
+    void theChosenPaymentMethodIsRecordedOnTheOrder() {
+        cartService.add(user, panel, 1);
+        CheckoutForm form = checkoutForm();
+        form.setPaymentMethod(PaymentMethod.KLARNA);
+
+        Order order = orderService.placeOrder(user, form);
+
+        assertThat(order.getPaymentMethod()).isEqualTo(PaymentMethod.KLARNA);
     }
 
     @Test

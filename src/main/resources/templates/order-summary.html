@@ -25,10 +25,17 @@
                   th:classappend="${order.status.name() == 'PAID'} ? 'paid'"
                   th:text="${order.status.displayName}">status</span>
         </dd>
+        <dt th:if="${order.paymentMethod != null}">Paying by</dt>
+        <dd th:if="${order.paymentMethod != null}" th:text="${order.paymentMethod.displayName}">method</dd>
         <dt>Delivering to</dt>
-        <dd>
-            <span th:text="${order.shippingName}">name</span><br>
-            <span th:text="${order.shippingAddress}">address</span><br>
+        <!--
+          Each line is its own element rather than a run of <br> tags, so the
+          address keeps the line breaks the customer typed without the
+          template's own indentation turning into blank lines.
+        -->
+        <dd class="address">
+            <span th:text="${order.shippingName}">name</span>
+            <span class="address-lines" th:text="${order.shippingAddress}">address</span>
             <span th:text="${order.shippingPostcode}">postcode</span>
         </dd>
     </dl>

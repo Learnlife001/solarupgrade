@@ -34,6 +34,27 @@
                           th:errors="*{shippingPostcode}">error</span>
                 </label>
 
+                <h2 class="section-heading">Payment method</h2>
+                <p class="note">
+                    Choose how to pay. Nothing is charged yet &mdash; card details, bank
+                    details and Klarna approval are handled by the provider after the
+                    order is placed, never on this page.
+                </p>
+
+                <span class="field-error" th:if="${#fields.hasErrors('paymentMethod')}"
+                      th:errors="*{paymentMethod}">error</span>
+
+                <fieldset class="payment-methods">
+                    <legend class="visually-hidden">Payment method</legend>
+                    <label class="payment-option" th:each="method : ${paymentMethods}">
+                        <input type="radio" th:field="*{paymentMethod}" th:value="${method}">
+                        <span class="payment-option-body">
+                            <span class="payment-option-name" th:text="${method.displayName}">Method</span>
+                            <span class="payment-option-note" th:text="${method.description}">Description</span>
+                        </span>
+                    </label>
+                </fieldset>
+
                 <button type="submit" class="button-primary button-block">Place order</button>
             </form>
         </section>
@@ -50,7 +71,7 @@
                 <strong>Total</strong>
                 <strong>&pound;<span th:text="${#numbers.formatDecimal(total, 1, 2)}">0.00</span></strong>
             </p>
-            <p class="note">Payment is captured after the order is placed.</p>
+            <p class="note">Delivery is included. Payment is captured after the order is placed.</p>
         </aside>
     </div>
 </main>

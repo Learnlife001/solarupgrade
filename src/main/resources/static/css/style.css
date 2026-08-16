@@ -161,6 +161,15 @@ img { max-width: 100%; display: block; }
     font-weight: 700;
     text-align: center;
     line-height: 1.45;
+    transition: transform .18s ease;
+}
+.cart-count.is-empty { display: none; }
+/* Brief nudge when the count changes, so an add that does not move the page
+   is still visibly acknowledged. */
+.cart-count.bumped { transform: scale(1.3); }
+@media (prefers-reduced-motion: reduce) {
+    .cart-count { transition: none; }
+    .cart-count.bumped { transform: none; }
 }
 
 .account { display: inline-flex; align-items: center; gap: .6rem; color: var(--ink-2); }
@@ -408,8 +417,16 @@ img { max-width: 100%; display: block; }
     font-size: .94rem;
 }
 .order-meta dt { color: var(--ink-2); }
-/* Addresses are entered as multi-line text; keep the line breaks. */
-.order-meta dd { margin: 0; white-space: pre-line; }
+.order-meta dd { margin: 0; }
+
+/*
+ * One line per element. Only the address itself gets pre-line, because it is
+ * the only value that legitimately contains the newlines the customer typed --
+ * applying it to the whole dd made the template's own indentation render as
+ * blank lines between the name, street and postcode.
+ */
+.order-meta dd.address { display: flex; flex-direction: column; }
+.order-meta dd.address .address-lines { white-space: pre-line; }
 
 .status-pill {
     display: inline-block;
@@ -511,8 +528,11 @@ label > .password-field input { margin-top: 0; }
 
 .inline-form { display: inline-flex; align-items: center; gap: .4rem; margin: 0; }
 
-.add-to-cart { display: flex; align-items: flex-end; gap: .75rem; margin-top: 1.5rem; }
+.add-to-cart { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .75rem; margin-top: 1.5rem; }
 .add-to-cart label { margin-bottom: 0; }
+/* Full width so the confirmation drops below the button rather than sitting
+   beside it and shifting the row. */
+.add-to-cart .add-status { flex-basis: 100%; margin-top: .25rem; }
 
 /* Beats the generic input[type="number"] width:100% above, which would
    otherwise stretch the quantity box across the table cell. */
@@ -560,6 +580,87 @@ input[type="number"].qty-input { width: 4.6rem; margin-top: 0; }
 .empty-state h2 { color: var(--ink); font-size: 1.15rem; }
 
 .note { color: var(--ink-2); font-size: .86rem; }
+
+/* Created by app.js after an add-to-basket, so it only ever exists when
+   JavaScript is there to fill it. */
+.add-status {
+    margin: .75rem 0 0;
+    font-size: .88rem;
+    font-weight: 600;
+    color: var(--accent-ink);
+}
+.add-status.is-error { color: var(--warn); }
+
+/* Present to screen readers, absent from the layout. */
+.visually-hidden {
+    position: absolute;
+    width: 1px; height: 1px;
+    margin: -1px; padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* --- Payment methods ------------------------------------------------------- */
+
+.section-heading {
+    margin: 2rem 0 .35rem;
+    font-size: 1.05rem;
+}
+
+.payment-methods {
+    border: 0;
+    margin: 0 0 1.75rem;
+    padding: 0;
+    display: grid;
+    gap: .6rem;
+}
+
+.payment-option {
+    display: flex;
+    align-items: flex-start;
+    gap: .75rem;
+    margin: 0;
+    padding: .85rem 1rem;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    cursor: pointer;
+    font-weight: 400;
+    color: var(--ink);
+}
+.payment-option:hover { border-color: var(--accent); }
+
+/* The radio stays a real radio: keyboard, arrow keys and screen readers all
+   keep working, and the card is only the styling around it. */
+.payment-option input[type="radio"] {
+    margin: .15rem 0 0;
+    accent-color: var(--accent);
+    flex: none;
+}
+
+.payment-option:has(input:checked) {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+}
+.payment-option:has(input:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.payment-option-body { display: flex; flex-direction: column; gap: .1rem; }
+.payment-option-name { font-weight: 650; font-size: .95rem; }
+.payment-option-note { color: var(--ink-2); font-size: .84rem; }
+
+/* --- Order list items ------------------------------------------------------ */
+
+.order-items ul { list-style: none; margin: 0; padding: 0; }
+.order-items li { display: flex; gap: .5rem; font-size: .9rem; }
+.order-items li + li { margin-top: .2rem; }
+.order-items .qty { color: var(--ink-2); min-width: 1.6rem; }
+.order-items .qty::after { content: ' \00d7'; }
+.order-items .note { margin: .45rem 0 0; font-size: .82rem; }
 
 /* --- Trust strip ----------------------------------------------------------- */
 

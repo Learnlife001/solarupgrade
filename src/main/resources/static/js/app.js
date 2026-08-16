@@ -43,7 +43,85 @@
     });
   }
 
+  /*
+   * Add to basket without leaving the page.
+   *
+   * The form is a real form posting to a real endpoint; this only intercepts
+   * the submit. Sending its own FormData carries Spring Security's hidden
+   * _csrf field with it, and the X-Requested-With header is what selects the
+   * JSON handler -- without JavaScript neither happens and the ordinary
+   * redirect to the basket runs instead.
+   */
+  function updateCartCount(count) {
+    var badge = document.querySelector('.cart-count');
+    if (!badge) {
+      return;
+    }
+    badge.textContent = count;
+    badge.classList.toggle('is-empty', count === 0);
+    badge.classList.remove('bumped');
+    // Force a reflow so the class re-applies even on repeated adds.
+    void badge.offsetWidth;
+    badge.classList.add('bumped');
+    window.setTimeout(function () {
+      badge.classList.remove('bumped');
+    }, 200);
+  }
+
+  function announce(form, text, isError) {
+    var status = form.querySelector('.add-status');
+    if (!status) {
+      status = document.createElement('p');
+      status.className = 'add-status';
+      // Assertive would interrupt; this is a confirmation, not a warning.
+      status.setAttribute('role', 'status');
+      form.appendChild(status);
+    }
+    status.textContent = text;
+    status.classList.toggle('is-error', Boolean(isError));
+  }
+
+  function enhanceAddToCart(form) {
+    var button = form.querySelector('button[type="submit"]');
+
+    form.addEventListener('submit', function (event) {
+      event.preventDefault();
+      if (button) {
+        button.disabled = true;
+      }
+
+      fetch(form.action, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: { 'X-Requested-With': 'fetch' },
+        credentials: 'same-origin'
+      })
+        .then(function (response) {
+          if (!response.ok) {
+            throw new Error('Request failed with ' + response.status);
+          }
+          return response.json();
+        })
+        .then(function (summary) {
+          updateCartCount(summary.itemCount);
+          announce(form, summary.message, false);
+        })
+        .catch(function () {
+          // Anything unexpected -- an expired session, a network drop -- falls
+          // back to the plain form post, which lands somewhere that explains
+          // itself rather than failing silently here.
+          form.submit();
+        })
+        .finally(function () {
+          if (button) {
+            button.disabled = false;
+          }
+        });
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('input[type="password"]').forEach(addToggle);
+    document.querySelectorAll('form.add-to-cart').forEach(enhanceAddToCart);
   });
 })();

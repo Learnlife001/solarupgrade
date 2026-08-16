@@ -52,6 +52,12 @@ public class Order {
     @Column(nullable = false, length = 32)
     private OrderStatus status = OrderStatus.PENDING_PAYMENT;
 
+    /** Nullable: orders placed before payment selection existed have none. */
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(length = 32)
+    private PaymentMethod paymentMethod;
+
     @Column(nullable = false)
     private String shippingName;
 
@@ -112,6 +118,14 @@ public class Order {
 
     public void setStatus(OrderStatus status) {
         this.status = status;
+    }
+
+    public PaymentMethod getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(PaymentMethod paymentMethod) {
+        this.paymentMethod = paymentMethod;
     }
 
     public String getShippingName() {

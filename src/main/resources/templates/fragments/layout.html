@@ -30,9 +30,15 @@
         </nav>
 
         <div class="header-actions">
+            <!--
+              The badge is always in the document, hidden when empty, so
+              app.js can update it in place after an add rather than having to
+              build the element.
+            -->
             <a class="cart-link" th:href="@{/cart}" sec:authorize="isAuthenticated()">
                 Basket
-                <span class="cart-count" th:if="${cartCount > 0}" th:text="${cartCount}">0</span>
+                <span class="cart-count" th:classappend="${cartCount == 0} ? 'is-empty'"
+                      th:text="${cartCount}">0</span>
             </a>
 
             <span sec:authorize="isAuthenticated()" class="account">

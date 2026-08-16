@@ -19,7 +19,7 @@
             <tr>
                 <th>Order</th>
                 <th>Placed</th>
-                <th class="num">Items</th>
+                <th>Items</th>
                 <th class="num">Total</th>
                 <th>Status</th>
             </tr>
@@ -28,7 +28,20 @@
             <tr th:each="order : ${orders}">
                 <td><a th:href="@{/orders/{id}(id=${order.id})}">#<span th:text="${order.id}">0</span></a></td>
                 <td th:text="${order.placedAtShortDisplay}">date</td>
-                <td class="num" th:text="${order.itemCount}">0</td>
+                <!--
+                  The products themselves, not just how many: an order is only
+                  recognisable by what is in it.
+                -->
+                <td class="order-items">
+                    <ul>
+                        <li th:each="item : ${order.items}">
+                            <span class="qty" th:text="${item.quantity}">1</span>
+                            <span th:text="${item.productName}">Product</span>
+                        </li>
+                    </ul>
+                    <p class="note" th:if="${order.paymentMethod != null}"
+                       th:text="${order.paymentMethod.displayName}">Payment method</p>
+                </td>
                 <td class="num">&pound;<span th:text="${#numbers.formatDecimal(order.total, 1, 2)}">0.00</span></td>
                 <td>
                     <span class="status-pill"

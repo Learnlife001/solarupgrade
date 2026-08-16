@@ -51,9 +51,10 @@ public class OrderService {
      * Turns the user's basket into an order: snapshots prices, decrements stock,
      * empties the basket and sends a confirmation.
      *
-     * <p>The order is left in {@link OrderStatus#PENDING_PAYMENT}. Payment capture
-     * is where the PayPal Orders API integration belongs; see
-     * {@link #markPaid(Long, User)}.
+     * <p>The order is left in {@link OrderStatus#PENDING_PAYMENT}, with the
+     * customer's chosen payment method recorded on it. That choice is what a
+     * provider needs to be told at capture time; capture itself is where the
+     * integration belongs, see {@link #markPaid(Long, User)}.
      */
     @Transactional
     public Order placeOrder(User user, CheckoutForm form) {
@@ -63,6 +64,7 @@ public class OrderService {
         }
 
         Order order = new Order(user, form.getShippingName(), form.getShippingAddress(), form.getShippingPostcode());
+        order.setPaymentMethod(form.getPaymentMethod());
 
         for (CartItem cartItem : cartItems) {
             Product product = cartItem.getProduct();
