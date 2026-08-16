@@ -14,8 +14,14 @@
     <h1>Sign in</h1>
 
     <p class="flash" th:if="${message}" th:text="${message}"></p>
+    <p class="flash error" th:if="${error}" th:text="${error}"></p>
     <p class="flash error" th:if="${param.error}">Wrong email or password.</p>
     <p class="flash" th:if="${param.logout}">You have been signed out.</p>
+
+    <div class="flash error" th:if="${param.unverified}">
+        <strong>Confirm your email first.</strong>
+        This account has not been confirmed yet, so it cannot sign in.
+    </div>
 
     <section class="panel">
         <form th:action="@{/login}" method="post">
@@ -28,6 +34,18 @@
                 <input type="password" name="password" autocomplete="current-password" required>
             </label>
             <button type="submit" class="button-primary button-block">Sign in</button>
+        </form>
+    </section>
+
+    <!-- Only offered once the sign-in has actually been refused as unverified. -->
+    <section class="panel" th:if="${param.unverified}" style="margin-top:1.25rem">
+        <h2>Send a new confirmation link</h2>
+        <form th:action="@{/resend-verification}" method="post">
+            <label>
+                Email
+                <input type="email" name="email" autocomplete="username" required>
+            </label>
+            <button type="submit" class="button-secondary button-block">Resend link</button>
         </form>
     </section>
 

@@ -156,6 +156,25 @@ status only once a capture is confirmed.
 of sending when mail is unconfigured. A send failure is caught rather than
 thrown, so it can never roll back an order that was already written.
 
+**Registration requires a working mailbox.** A new account is created disabled
+and cannot sign in until the link emailed to it is followed. Format validation
+alone is worthless here — `nobody@madeupdomain.test` is perfectly well-formed —
+so the address is only trusted once something has actually arrived at it. The
+token is 32 random bytes, valid for 24 hours, and burned on first use.
+
+Unknown, expired and already-used tokens all produce the same message, and the
+"resend link" form always reports success whether or not the address is
+registered. Both are deliberate: otherwise either one would let an anonymous
+visitor enumerate which email addresses have accounts.
+
+Because links must be absolute and the app cannot see its own public hostname
+from behind a proxy, deployments must set `APP_BASE_URL`.
+
+**The catalogue is reference data, the demo account is not.** Products ship as a
+Flyway migration so every database including production has something to sell.
+The demo account is seeded separately behind `app.seed-demo-data`, because its
+password is published in this README and must never reach a real database.
+
 ## Running against a real database locally
 
 Both database profiles read every value from the environment — no credentials

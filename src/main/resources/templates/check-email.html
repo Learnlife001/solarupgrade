@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Confirm your email &middot; SolarUpgrade</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container narrow">
+    <div class="banner success">
+        <span class="banner-tick" aria-hidden="true">&#9993;</span>
+        <div>
+            <h2>Check your email</h2>
+            <p>
+                We have sent a confirmation link
+                <span th:if="${pendingEmail}">to <strong th:text="${pendingEmail}">you</strong></span>.
+                Follow it to finish setting up your account.
+            </p>
+        </div>
+    </div>
+
+    <section class="panel">
+        <p class="note" style="margin-top:0">
+            The link is valid for 24 hours. You will not be able to sign in until
+            the address is confirmed.
+        </p>
+        <p class="note">
+            Nothing arrived? Check the spam folder, then request another link
+            from the <a th:href="@{/login}">sign-in page</a>.
+        </p>
+    </section>
+</main>
+
+<div th:replace="~{fragments/layout :: footer}"></div>
+
+</body>
+</html>

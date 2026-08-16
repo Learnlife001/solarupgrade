@@ -9,6 +9,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
@@ -46,7 +47,43 @@ public class AuthController {
         }
 
         userService.register(registrationForm);
-        redirectAttributes.addFlashAttribute("message", "Account created. Please sign in.");
+        redirectAttributes.addFlashAttribute("pendingEmail", registrationForm.getEmail().trim().toLowerCase());
+        return "redirect:/register/check-email";
+    }
+
+    /**
+     * Shown after registering. Deliberately a separate page rather than a flash
+     * message on the sign-in form, because the next step is to go and read an
+     * email, not to try signing in.
+     */
+    @GetMapping("/register/check-email")
+    public String checkEmail() {
+        return "check-email";
+    }
+
+    @GetMapping("/verify")
+    public String verify(@RequestParam(required = false) String token, RedirectAttributes redirectAttributes) {
+        return userService.verify(token)
+                .map(user -> {
+                    redirectAttributes.addFlashAttribute("message",
+                            "Email confirmed. You can sign in now.");
+                    return "redirect:/login";
+                })
+                .orElseGet(() -> {
+                    // Unknown, already-used and expired tokens are reported the
+                    // same way, so this cannot be used to probe for valid ones.
+                    redirectAttributes.addFlashAttribute("error",
+                            "That confirmation link is invalid or has expired. Request a new one below.");
+                    return "redirect:/login?unverified";
+                });
+    }
+
+    @PostMapping("/resend-verification")
+    public String resendVerification(@RequestParam String email, RedirectAttributes redirectAttributes) {
+        userService.resendVerification(email);
+        // Always the same answer, whether or not the address is registered.
+        redirectAttributes.addFlashAttribute("message",
+                "If that address has an account awaiting confirmation, a new link is on its way.");
         return "redirect:/login";
     }
 }

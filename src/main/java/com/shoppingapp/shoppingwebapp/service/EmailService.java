@@ -25,13 +25,18 @@ public class EmailService {
     private final ObjectProvider<ResendMailer> resendProvider;
     private final ObjectProvider<JavaMailSender> mailSenderProvider;
     private final String fromAddress;
+    private final String baseUrl;
 
     public EmailService(ObjectProvider<ResendMailer> resendProvider,
                         ObjectProvider<JavaMailSender> mailSenderProvider,
-                        @Value("${app.mail.from:no-reply@solarupgrade.example}") String fromAddress) {
+                        @Value("${app.mail.from:no-reply@solarupgrade.example}") String fromAddress,
+                        @Value("${app.base-url:http://localhost:8080}") String baseUrl) {
         this.resendProvider = resendProvider;
         this.mailSenderProvider = mailSenderProvider;
         this.fromAddress = fromAddress;
+        // Verification links must be absolute, and the app cannot infer its own
+        // public address from behind a proxy.
+        this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
     }
 
     /**
@@ -46,15 +51,21 @@ public class EmailService {
     }
 
     /**
-     * Sent when an account is created. Like the order confirmation this is
-     * best-effort: a registration must not fail because email is down.
+     * Sends the link that turns a new registration into a usable account.
+     *
+     * <p>Best-effort like the rest: a send failure leaves the account
+     * unverified rather than failing the registration, and the address can
+     * request a fresh link.
      */
-    public void sendWelcome(User user) {
+    public void sendVerification(User user) {
+        String link = baseUrl + "/verify?token=" + user.getVerificationToken();
         String body = "Hi " + user.getFullName() + ",\n\n"
-                + "Your SolarUpgrade account is ready. You can now build a basket "
-                + "and track your orders.\n\n"
-                + "If you did not create this account, please ignore this email.\n";
-        send(user.getEmail(), "Welcome to SolarUpgrade", body, "welcome email for " + user.getEmail());
+                + "Confirm your email address to finish setting up your SolarUpgrade account:\n\n"
+                + link + "\n\n"
+                + "The link is valid for 24 hours. Until it is used you will not be able to sign in.\n\n"
+                + "If you did not create this account, ignore this email and nothing will happen.\n";
+        send(user.getEmail(), "Confirm your SolarUpgrade email", body,
+                "verification email for " + user.getEmail());
     }
 
     private void send(String to, String subject, String body, String description) {

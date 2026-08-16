@@ -55,3 +55,8 @@ services:
         sync: false
       - key: MAIL_FROM
         value: SolarUpgrade <orders@auth.cgreglab.space>
+
+      # Verification links must be absolute and point at the public hostname;
+      # the app cannot infer it from behind Render's proxy.
+      - key: APP_BASE_URL
+        value: https://solarupgrade.onrender.com

@@ -39,6 +39,21 @@ public class User {
     @Column(nullable = false)
     private Instant createdAt = Instant.now();
 
+    /**
+     * Until this is true the account cannot sign in. It is the only thing that
+     * makes a typed-in address mean anything: an unverified account proves
+     * nothing about whether the mailbox exists or belongs to the registrant.
+     */
+    @Column(nullable = false)
+    private boolean emailVerified = false;
+
+    /** Single-use token from the verification link; cleared once used. */
+    @Column(length = 64)
+    private String verificationToken;
+
+    @Column
+    private Instant verificationTokenExpiresAt;
+
     protected User() {
         // required by JPA
     }
@@ -47,6 +62,34 @@ public class User {
         this.email = email;
         this.password = password;
         this.fullName = fullName;
+    }
+
+    public boolean isEmailVerified() {
+        return emailVerified;
+    }
+
+    public String getVerificationToken() {
+        return verificationToken;
+    }
+
+    public Instant getVerificationTokenExpiresAt() {
+        return verificationTokenExpiresAt;
+    }
+
+    public void issueVerificationToken(String token, Instant expiresAt) {
+        this.verificationToken = token;
+        this.verificationTokenExpiresAt = expiresAt;
+    }
+
+    public boolean isVerificationTokenValid(Instant now) {
+        return verificationTokenExpiresAt != null && now.isBefore(verificationTokenExpiresAt);
+    }
+
+    /** Marks the address confirmed and burns the token so the link is single-use. */
+    public void markEmailVerified() {
+        this.emailVerified = true;
+        this.verificationToken = null;
+        this.verificationTokenExpiresAt = null;
     }
 
     public Long getId() {
