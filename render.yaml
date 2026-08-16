@@ -1,18 +1,10 @@
-# Render Blueprint. Point Render at this repository and it reads this file,
-# creating both the database and the web service.
+# Render Blueprint. Point Render at this repository and it reads this file.
 #
-# The database credentials are wired from the managed Postgres below via
-# fromDatabase, so there is nothing to copy by hand and no password ends up in
-# this file. The only secret you set yourself is the Resend API key.
-
-databases:
-  - name: solarupgrade-db
-    databaseName: solarupgrade
-    user: solarupgrade
-    plan: free
-    region: frankfurt
-    postgresMajorVersion: "16"
-    ipAllowList: []   # empty = reachable only from inside Render, not the internet
+# The database lives outside Render (Neon, Frankfurt), so no database is
+# declared here. Render's own free Postgres plan allows one instance per
+# workspace and is deleted after 30 days, which is why it is not used.
+#
+# Values marked sync: false are set in the Render dashboard and never committed.
 
 services:
   - type: web
@@ -20,7 +12,7 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     plan: free
-    # Same region as the database, so they talk over Render's private network.
+    # Same region as the Neon project, so queries stay inside Frankfurt.
     region: frankfurt
     branch: master
 
@@ -28,42 +20,37 @@ services:
     healthCheckPath: /actuator/health
 
     envVars:
-      # postgres = the managed database below, resend = transactional email.
+      # postgres = the external Neon database, resend = transactional email.
       - key: SPRING_PROFILES_ACTIVE
         value: postgres,resend
 
-      # --- Database: filled in by Render from solarupgrade-db ----------------
+      # --- Neon (Project Dashboard -> Connect) -------------------------------
+      # Host, database and user are not secret; the password is.
       - key: DB_HOST
-        fromDatabase:
-          name: solarupgrade-db
-          property: host
+        sync: false
       - key: DB_PORT
-        fromDatabase:
-          name: solarupgrade-db
-          property: port
+        value: "5432"
       - key: DB_NAME
-        fromDatabase:
-          name: solarupgrade-db
-          property: database
+        sync: false
       - key: DB_USERNAME
-        fromDatabase:
-          name: solarupgrade-db
-          property: user
+        sync: false
       - key: DB_PASSWORD
-        fromDatabase:
-          name: solarupgrade-db
-          property: password
+        sync: false
 
-      # Private network between service and database; see the note in
-      # application-postgres.properties.
+      # Neon terminates TLS and refuses plaintext, so require it rather than
+      # relying on the "prefer" default.
       - key: DB_SSL_MODE
-        value: prefer
-      # The free database plan allows few connections.
+        value: require
+
+      # Neon's free plan allows few connections and scales to zero when idle.
+      # A small pool that drains fully lets it suspend instead of burning the
+      # monthly compute allowance on an idle connection.
       - key: DB_POOL_SIZE
         value: "5"
+      - key: DB_POOL_MIN_IDLE
+        value: "0"
 
-      # --- Resend: the one value you set yourself ----------------------------
-      # https://resend.com/api-keys
+      # --- Resend (https://resend.com/api-keys) ------------------------------
       - key: RESEND_API_KEY
         sync: false
       - key: MAIL_FROM
