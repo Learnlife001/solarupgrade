@@ -17,6 +17,9 @@ import java.time.Instant;
 @Table(name = "users")
 public class User {
 
+    /** Wrong guesses allowed against one verification code before it is burned. */
+    public static final int MAX_VERIFICATION_ATTEMPTS = 5;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -47,12 +50,21 @@ public class User {
     @Column(nullable = false)
     private boolean emailVerified = false;
 
-    /** Single-use token from the verification link; cleared once used. */
-    @Column(length = 64)
-    private String verificationToken;
+    /** Six-digit code the user types in; cleared once used. */
+    @Column(length = 6)
+    private String verificationCode;
 
     @Column
-    private Instant verificationTokenExpiresAt;
+    private Instant verificationCodeExpiresAt;
+
+    /**
+     * Failed attempts against the current code. A six-digit code is only a
+     * million possibilities, so without a cap it could simply be guessed;
+     * exceeding {@link #MAX_VERIFICATION_ATTEMPTS} burns the code and forces a
+     * new one to be requested.
+     */
+    @Column(nullable = false)
+    private int verificationAttempts = 0;
 
     protected User() {
         // required by JPA
@@ -68,28 +80,56 @@ public class User {
         return emailVerified;
     }
 
-    public String getVerificationToken() {
-        return verificationToken;
+    public String getVerificationCode() {
+        return verificationCode;
     }
 
-    public Instant getVerificationTokenExpiresAt() {
-        return verificationTokenExpiresAt;
+    public Instant getVerificationCodeExpiresAt() {
+        return verificationCodeExpiresAt;
     }
 
-    public void issueVerificationToken(String token, Instant expiresAt) {
-        this.verificationToken = token;
-        this.verificationTokenExpiresAt = expiresAt;
+    public int getVerificationAttempts() {
+        return verificationAttempts;
     }
 
-    public boolean isVerificationTokenValid(Instant now) {
-        return verificationTokenExpiresAt != null && now.isBefore(verificationTokenExpiresAt);
+    /** Replaces any outstanding code and gives the user a fresh set of attempts. */
+    public void issueVerificationCode(String code, Instant expiresAt) {
+        this.verificationCode = code;
+        this.verificationCodeExpiresAt = expiresAt;
+        this.verificationAttempts = 0;
     }
 
-    /** Marks the address confirmed and burns the token so the link is single-use. */
+    public boolean isVerificationCodeValid(Instant now) {
+        return verificationCode != null
+                && verificationCodeExpiresAt != null
+                && now.isBefore(verificationCodeExpiresAt)
+                && verificationAttempts < MAX_VERIFICATION_ATTEMPTS;
+    }
+
+    /**
+     * Counts a wrong guess.
+     *
+     * @return true when that guess exhausted the allowance, leaving the code
+     *         dead until a new one is requested.
+     */
+    public boolean recordFailedVerification() {
+        verificationAttempts++;
+        if (verificationAttempts >= MAX_VERIFICATION_ATTEMPTS) {
+            clearVerificationCode();
+            return true;
+        }
+        return false;
+    }
+
+    /** Marks the address confirmed and burns the code so it is single-use. */
     public void markEmailVerified() {
         this.emailVerified = true;
-        this.verificationToken = null;
-        this.verificationTokenExpiresAt = null;
+        clearVerificationCode();
+    }
+
+    private void clearVerificationCode() {
+        this.verificationCode = null;
+        this.verificationCodeExpiresAt = null;
     }
 
     public Long getId() {

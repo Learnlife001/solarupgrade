@@ -61,7 +61,10 @@ public class SecurityConfig {
                         // Browsing the catalogue does not require an account.
                         .requestMatchers("/", "/products/**", "/register", "/login",
                                 "/verify", "/verify/**", "/resend-verification",
-                                "/css/**", "/js/**", "/images/**", "/h2-console/**").permitAll()
+                                "/css/**", "/js/**", "/images/**",
+                                // Browsers fetch these before any session exists.
+                                "/favicon.svg", "/favicon.ico",
+                                "/h2-console/**").permitAll()
                         // Only health and info are exposed; see application.properties.
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .anyRequest().authenticated())

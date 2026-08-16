@@ -1,11 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>SolarUpgrade &mdash; home solar, storage and EV charging</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
-</head>
+<head th:replace="~{fragments/layout :: head('SolarUpgrade — home solar, storage and EV charging')}"></head>
 <body>
 
 <div th:replace="~{fragments/layout :: header}"></div>

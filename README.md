@@ -157,18 +157,29 @@ of sending when mail is unconfigured. A send failure is caught rather than
 thrown, so it can never roll back an order that was already written.
 
 **Registration requires a working mailbox.** A new account is created disabled
-and cannot sign in until the link emailed to it is followed. Format validation
-alone is worthless here — `nobody@madeupdomain.test` is perfectly well-formed —
-so the address is only trusted once something has actually arrived at it. The
-token is 32 random bytes, valid for 24 hours, and burned on first use.
+and cannot sign in until the six-digit code emailed to it is entered. Format
+validation alone is worthless here — `nobody@madeupdomain.test` is perfectly
+well-formed — so the address is only trusted once something has actually
+arrived at it.
 
-Unknown, expired and already-used tokens all produce the same message, and the
-"resend link" form always reports success whether or not the address is
-registered. Both are deliberate: otherwise either one would let an anonymous
-visitor enumerate which email addresses have accounts.
+A code rather than a link, because a link travels badly: it wraps in plain-text
+mail, gets rewritten by some clients, and cannot be carried from a phone to a
+laptop. The cost is that six digits is only a million possibilities, so:
 
-Because links must be absolute and the app cannot see its own public hostname
-from behind a proxy, deployments must set `APP_BASE_URL`.
+- wrong guesses are capped at `User.MAX_VERIFICATION_ATTEMPTS`, after which the
+  code is burned and a new one must be requested
+- codes expire in 15 minutes rather than a day
+- the code is checked against one named account, never matched across all of
+  them — six digits is not unique enough to identify a user on its own
+- comparison is constant-time, so it leaks no per-digit timing signal
+
+Wrong, expired and exhausted codes all produce the same message, and the
+"resend" form always reports success whether or not the address is registered.
+Both are deliberate: either one would let an anonymous visitor enumerate which
+email addresses have accounts.
+
+Deployments must set `APP_BASE_URL`, which the email uses to tell people where
+to enter the code.
 
 **The catalogue is reference data, the demo account is not.** Products ship as a
 Flyway migration so every database including production has something to sell.

@@ -58,14 +58,17 @@ public class EmailService {
      * request a fresh link.
      */
     public void sendVerification(User user) {
-        String link = baseUrl + "/verify?token=" + user.getVerificationToken();
+        String code = user.getVerificationCode();
         String body = "Hi " + user.getFullName() + ",\n\n"
-                + "Confirm your email address to finish setting up your SolarUpgrade account:\n\n"
-                + link + "\n\n"
-                + "The link is valid for 24 hours. Until it is used you will not be able to sign in.\n\n"
-                + "If you did not create this account, ignore this email and nothing will happen.\n";
-        send(user.getEmail(), "Confirm your SolarUpgrade email", body,
-                "verification email for " + user.getEmail());
+                + "Your SolarUpgrade confirmation code is:\n\n"
+                + "    " + code + "\n\n"
+                + "Enter it at " + baseUrl + "/verify to finish setting up your account.\n\n"
+                + "The code expires in 15 minutes. Until it is used you will not be able to sign in.\n\n"
+                + "If you did not create this account, ignore this email and nothing will happen. "
+                + "Nobody can use this code without also knowing your email address.\n";
+        // Subject carries the code too, so it is readable from a notification.
+        send(user.getEmail(), code + " is your SolarUpgrade confirmation code", body,
+                "verification code for " + user.getEmail());
     }
 
     private void send(String to, String subject, String body, String description) {

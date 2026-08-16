@@ -11,7 +11,6 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -37,13 +36,17 @@ class EmailVerificationTest {
         return f;
     }
 
+    private User reload(String email) {
+        return userRepository.findByEmail(email).orElseThrow();
+    }
+
     @Test
-    void registrationCreatesAnUnverifiedAccountWithAToken() {
+    void registrationCreatesAnUnverifiedAccountWithASixDigitCode() {
         User user = userService.register(form("fresh@example.test"));
 
         assertThat(user.isEmailVerified()).isFalse();
-        assertThat(user.getVerificationToken()).isNotBlank();
-        assertThat(user.getVerificationTokenExpiresAt()).isAfter(Instant.now());
+        assertThat(user.getVerificationCode()).hasSize(6).containsOnlyDigits();
+        assertThat(user.getVerificationCodeExpiresAt()).isAfter(Instant.now());
     }
 
     @Test
@@ -57,64 +60,104 @@ class EmailVerificationTest {
     }
 
     @Test
-    void followingTheLinkVerifiesAndEnablesTheAccount() {
+    void theRightCodeVerifiesAndEnablesTheAccount() {
         User user = userService.register(form("confirms@example.test"));
 
-        Optional<User> verified = userService.verify(user.getVerificationToken());
+        assertThat(userService.verify("confirms@example.test", user.getVerificationCode())).isPresent();
 
-        assertThat(verified).isPresent();
-        assertThat(verified.get().isEmailVerified()).isTrue();
+        assertThat(reload("confirms@example.test").isEmailVerified()).isTrue();
         assertThat(userDetailsService.loadUserByUsername("confirms@example.test").isEnabled()).isTrue();
     }
 
     @Test
-    void theLinkIsSingleUse() {
+    void theCodeIsSingleUse() {
         User user = userService.register(form("once@example.test"));
-        String token = user.getVerificationToken();
+        String code = user.getVerificationCode();
 
-        assertThat(userService.verify(token)).isPresent();
-        // Token was burned on first use, so replaying the link does nothing.
-        assertThat(userService.verify(token)).isEmpty();
+        assertThat(userService.verify("once@example.test", code)).isPresent();
+        assertThat(userService.verify("once@example.test", code)).isEmpty();
     }
 
     @Test
-    void anExpiredTokenIsRejected() {
+    void aWrongCodeIsRejectedAndCounted() {
+        userService.register(form("wrong@example.test"));
+
+        assertThat(userService.verify("wrong@example.test", "000000")).isEmpty();
+
+        User reloaded = reload("wrong@example.test");
+        assertThat(reloaded.isEmailVerified()).isFalse();
+        assertThat(reloaded.getVerificationAttempts()).isEqualTo(1);
+    }
+
+    @Test
+    void theCodeIsBurnedAfterTooManyWrongGuesses() {
+        User user = userService.register(form("bruteforce@example.test"));
+        String realCode = user.getVerificationCode();
+        String wrongCode = realCode.equals("000000") ? "111111" : "000000";
+
+        for (int i = 0; i < User.MAX_VERIFICATION_ATTEMPTS; i++) {
+            assertThat(userService.verify("bruteforce@example.test", wrongCode)).isEmpty();
+        }
+
+        // Even the correct code no longer works: guessing has to start over
+        // with a freshly issued one.
+        assertThat(userService.verify("bruteforce@example.test", realCode)).isEmpty();
+        assertThat(reload("bruteforce@example.test").isEmailVerified()).isFalse();
+    }
+
+    @Test
+    void anExpiredCodeIsRejected() {
         User user = userService.register(form("stale@example.test"));
-        user.issueVerificationToken(user.getVerificationToken(), Instant.now().minusSeconds(1));
+        String code = user.getVerificationCode();
+        user.issueVerificationCode(code, Instant.now().minusSeconds(1));
         userRepository.save(user);
 
-        assertThat(userService.verify(user.getVerificationToken())).isEmpty();
-        assertThat(userRepository.findByEmail("stale@example.test").orElseThrow().isEmailVerified()).isFalse();
+        assertThat(userService.verify("stale@example.test", code)).isEmpty();
+        assertThat(reload("stale@example.test").isEmailVerified()).isFalse();
     }
 
     @Test
-    void unknownAndEmptyTokensAreRejected() {
-        assertThat(userService.verify("not-a-real-token")).isEmpty();
-        assertThat(userService.verify("")).isEmpty();
-        assertThat(userService.verify(null)).isEmpty();
+    void aCodeOnlyWorksForTheAccountItWasIssuedTo() {
+        User a = userService.register(form("owner@example.test"));
+        userService.register(form("other@example.test"));
+
+        // Six digits are not unique, so the code must be checked against one
+        // named account rather than matched across all of them.
+        assertThat(userService.verify("other@example.test", a.getVerificationCode())).isEmpty();
+        assertThat(reload("other@example.test").isEmailVerified()).isFalse();
     }
 
     @Test
-    void resendIssuesAFreshTokenForAnUnverifiedAccount() {
+    void unknownAddressesAndBlankInputAreRejected() {
+        assertThat(userService.verify("nobody@example.test", "123456")).isEmpty();
+        assertThat(userService.verify("", "123456")).isEmpty();
+        assertThat(userService.verify("nobody@example.test", "")).isEmpty();
+        assertThat(userService.verify(null, null)).isEmpty();
+    }
+
+    @Test
+    void resendIssuesAFreshCodeAndRestoresTheAttemptAllowance() {
         User user = userService.register(form("resend@example.test"));
-        String first = user.getVerificationToken();
+        String first = user.getVerificationCode();
+        userService.verify("resend@example.test", "000000");
 
         userService.resendVerification("resend@example.test");
 
-        String second = userRepository.findByEmail("resend@example.test").orElseThrow().getVerificationToken();
-        assertThat(second).isNotBlank().isNotEqualTo(first);
+        User reloaded = reload("resend@example.test");
+        assertThat(reloaded.getVerificationCode()).hasSize(6).isNotEqualTo(first);
+        assertThat(reloaded.getVerificationAttempts()).isZero();
     }
 
     @Test
     void resendDoesNothingForAnAlreadyVerifiedAccount() {
         User user = userService.register(form("done@example.test"));
-        userService.verify(user.getVerificationToken());
+        userService.verify("done@example.test", user.getVerificationCode());
 
         userService.resendVerification("done@example.test");
 
-        User reloaded = userRepository.findByEmail("done@example.test").orElseThrow();
+        User reloaded = reload("done@example.test");
         assertThat(reloaded.isEmailVerified()).isTrue();
-        assertThat(reloaded.getVerificationToken()).isNull();
+        assertThat(reloaded.getVerificationCode()).isNull();
     }
 
     @Test

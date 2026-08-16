@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.util.UriUtils;
+
+import java.nio.charset.StandardCharsets;
 
 @Controller
 public class AuthController {
@@ -47,35 +50,36 @@ public class AuthController {
         }
 
         userService.register(registrationForm);
-        redirectAttributes.addFlashAttribute("pendingEmail", registrationForm.getEmail().trim().toLowerCase());
-        return "redirect:/register/check-email";
+        // Carried so the code form can prefill the address the user just typed.
+        return "redirect:/verify?email=" + UriUtils.encodeQueryParam(
+                registrationForm.getEmail().trim().toLowerCase(), StandardCharsets.UTF_8);
     }
 
     /**
-     * Shown after registering. Deliberately a separate page rather than a flash
-     * message on the sign-in form, because the next step is to go and read an
-     * email, not to try signing in.
+     * The code entry form. Reached straight after registering, and linked from
+     * a refused sign-in.
      */
-    @GetMapping("/register/check-email")
-    public String checkEmail() {
-        return "check-email";
+    @GetMapping("/verify")
+    public String verifyForm(@RequestParam(required = false) String email, Model model) {
+        model.addAttribute("email", email == null ? "" : email);
+        return "verify";
     }
 
-    @GetMapping("/verify")
-    public String verify(@RequestParam(required = false) String token, RedirectAttributes redirectAttributes) {
-        return userService.verify(token)
-                .map(user -> {
-                    redirectAttributes.addFlashAttribute("message",
-                            "Email confirmed. You can sign in now.");
-                    return "redirect:/login";
-                })
-                .orElseGet(() -> {
-                    // Unknown, already-used and expired tokens are reported the
-                    // same way, so this cannot be used to probe for valid ones.
-                    redirectAttributes.addFlashAttribute("error",
-                            "That confirmation link is invalid or has expired. Request a new one below.");
-                    return "redirect:/login?unverified";
-                });
+    @PostMapping("/verify")
+    public String verify(@RequestParam String email,
+                         @RequestParam String code,
+                         RedirectAttributes redirectAttributes) {
+        if (userService.verify(email, code).isPresent()) {
+            redirectAttributes.addFlashAttribute("message", "Email confirmed. You can sign in now.");
+            return "redirect:/login";
+        }
+        // Wrong, expired and exhausted codes all say the same thing, so the
+        // form cannot be used to work out which addresses have accounts.
+        redirectAttributes.addFlashAttribute("error",
+                "That code is not valid. It may have expired, or been entered incorrectly too many times. "
+                        + "Request a new one below.");
+        redirectAttributes.addAttribute("email", email);
+        return "redirect:/verify";
     }
 
     @PostMapping("/resend-verification")
@@ -83,7 +87,8 @@ public class AuthController {
         userService.resendVerification(email);
         // Always the same answer, whether or not the address is registered.
         redirectAttributes.addFlashAttribute("message",
-                "If that address has an account awaiting confirmation, a new link is on its way.");
-        return "redirect:/login";
+                "If that address has an account awaiting confirmation, a new code is on its way.");
+        redirectAttributes.addAttribute("email", email);
+        return "redirect:/verify";
     }
 }

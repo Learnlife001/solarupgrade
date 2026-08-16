@@ -1,11 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Sign in &middot; SolarUpgrade</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
-</head>
+<head th:replace="~{fragments/layout :: head('Sign in · SolarUpgrade')}"></head>
 <body>
 
 <div th:replace="~{fragments/layout :: header}"></div>
@@ -39,14 +34,9 @@
 
     <!-- Only offered once the sign-in has actually been refused as unverified. -->
     <section class="panel" th:if="${param.unverified}" style="margin-top:1.25rem">
-        <h2>Send a new confirmation link</h2>
-        <form th:action="@{/resend-verification}" method="post">
-            <label>
-                Email
-                <input type="email" name="email" autocomplete="username" required>
-            </label>
-            <button type="submit" class="button-secondary button-block">Resend link</button>
-        </form>
+        <h2>Have a confirmation code?</h2>
+        <p class="note">Enter the six-digit code we emailed you.</p>
+        <a class="button-secondary button-block" th:href="@{/verify}">Enter code</a>
     </section>
 
     <p class="note" style="margin-top:1.25rem">

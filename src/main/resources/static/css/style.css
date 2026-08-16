@@ -444,6 +444,44 @@ input:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visib
     outline-offset: 2px;
 }
 
+/* Confirmation code: wide tracking and tabular figures so six digits are easy
+   to check against the email. */
+input[type="text"].code-input {
+    font-size: 1.4rem;
+    letter-spacing: .4em;
+    text-indent: .4em;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    max-width: 11rem;
+}
+
+/* Password reveal. The wrapper and button are injected by app.js, so none of
+   this renders when JavaScript is unavailable. */
+.password-field { position: relative; display: block; }
+.password-field input { padding-right: 2.9rem; }
+
+.password-toggle {
+    position: absolute;
+    top: 50%;
+    right: .5rem;
+    transform: translateY(-50%);
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: none;
+    border-radius: var(--r-sm);
+    background: transparent;
+    color: var(--ink-2);
+    cursor: pointer;
+}
+.password-toggle:hover { color: var(--ink); background: var(--surface-2); }
+
+/* The input has a top margin from the label, so nudge the button to match. */
+label > .password-field { margin-top: .35rem; }
+label > .password-field input { margin-top: 0; }
+
 .button-primary, .button-secondary {
     display: inline-flex;
     align-items: center;

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Confirm your email · SolarUpgrade')}"></head>
+<body>
+
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container narrow">
+    <h1>Confirm your email</h1>
+
+    <p class="flash" th:if="${message}" th:text="${message}"></p>
+    <p class="flash error" th:if="${error}" th:text="${error}"></p>
+
+    <p class="note">
+        We have emailed you a six-digit code. Enter it below to finish setting up
+        your account. It expires in 15 minutes.
+    </p>
+
+    <section class="panel">
+        <form th:action="@{/verify}" method="post">
+            <label>
+                Email
+                <input type="email" name="email" th:value="${email}" autocomplete="username" required>
+            </label>
+            <label>
+                Confirmation code
+                <!-- inputmode/pattern bring up the numeric keypad on a phone;
+                     autocomplete lets the browser offer it straight from the email. -->
+                <input type="text" name="code" class="code-input"
+                       inputmode="numeric" pattern="[0-9]{6}" maxlength="6"
+                       autocomplete="one-time-code" placeholder="123456" required>
+            </label>
+            <button type="submit" class="button-primary button-block">Confirm email</button>
+        </form>
+    </section>
+
+    <section class="panel" style="margin-top:1.25rem">
+        <h2>Didn't get it?</h2>
+        <p class="note">Check the spam folder first, then request a new code.</p>
+        <form th:action="@{/resend-verification}" method="post">
+            <input type="hidden" name="email" th:value="${email}">
+            <button type="submit" class="button-secondary button-block">Send a new code</button>
+        </form>
+    </section>
+</main>
+
+<div th:replace="~{fragments/layout :: footer}"></div>
+
+</body>
+</html>
