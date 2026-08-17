@@ -16,7 +16,7 @@ account.
 | | |
 |---|---|
 | Demo login | `demo@solarupgrade.example` |
-| Demo password | `password123` |
+| Demo password | `sunny-rooftop-42` |
 | H2 console | <http://localhost:8080/h2-console> (JDBC URL `jdbc:h2:mem:solarupgrade`) |
 
 Run the tests with `./gradlew build`.
@@ -179,6 +179,99 @@ rebuilt from it:
 **The domain model here is a reconstruction, not the original.** Entity fields,
 page layouts and business rules were written fresh to match that outline. Treat
 them as a starting point to edit, not as recovered code.
+
+## Security notes
+
+**Rate limits, because there were none.** `/login`, `/register`, `/verify` and
+`/resend-verification` were unlimited, so a password could be guessed as fast as
+the network allowed and a resend loop could drain the mail quota — which costs
+real money and can get the sending domain marked as a spam source. Only POSTs
+are limited; reading the sign-in page costs nothing.
+
+| Endpoint | Allowance |
+|---|---|
+| `POST /resend-verification` | 3 per hour (each one sends an email) |
+| `POST /register` | 5 per hour |
+| `POST /verify` | 15 per 15 minutes |
+| `POST /login` | 10 per 15 minutes |
+
+**The limiter's own limits, stated rather than hidden.** The counters are in
+memory, so they reset on restart and are per-instance — running two copies of
+the app doubles every limit. A fixed window also lets a caller spend one
+window's allowance at its end and again at the start of the next. Both are
+acceptable at this size; neither is acceptable forever, and Redis is where this
+goes when there is more than one instance.
+
+**Callers are identified by `getRemoteAddr()`, never by reading
+`X-Forwarded-For` directly.** That header is trivially forged, so parsing it
+here would let an attacker mint a fresh identity per request and defeat the
+filter entirely. Instead `server.forward-headers-strategy=framework` makes the
+container resolve the real client from the proxy it trusts. The two settings
+only work together — drop the property and every request behind Render's proxy
+looks like one client.
+
+**Account lockout is the second layer, following the account rather than the
+caller,** so moving between addresses buys no fresh allowance. Five wrong
+passwords, then a fifteen-minute cooldown, implemented as Spring Security's own
+`accountLocked` flag so it is enforced before the password is compared.
+
+Anything that locks an account on failed attempts also hands a stranger a way
+to lock someone out on demand by guessing their address. That is why the lock
+expires on its own rather than needing support, and why a correct password
+clears the count immediately. Only wrong passwords count: an unverified account
+is refused for an unrelated reason, and counting it would let a new customer who
+had not checked their inbox lock themselves out by trying twice.
+
+The locked page says sign-in is paused, not "too many wrong passwords for this
+account" — the second phrasing would confirm to a stranger that an address they
+guessed has an account here.
+
+**Session cookie:** `Secure` (on the profiles that run behind TLS), `HttpOnly`
+and `SameSite=Lax`. Lax rather than Strict because the return from PayPal is a
+top-level cross-site navigation, and Strict would drop the session on the way
+back.
+
+**HSTS and a Content-Security-Policy** with no `unsafe-inline` — the concession
+that usually makes a CSP decorative. It costs nothing here because the six
+inline `style` attributes that existed were replaced with classes rather than
+allowing inline styles for their sake. HSTS is only emitted on requests the
+container considers secure, which is the other reason
+`forward-headers-strategy` matters.
+
+**Passwords: length and a blocklist, not composition rules.** Ten characters
+minimum, a refusal list of the most-guessed choices, and no password that
+contains the email address it protects. Demanding a capital, a digit and a
+symbol reliably produces `Password1!` — it pushes people into the corner of the
+keyspace attackers try first, and towards writing the result down. This follows
+NIST SP 800-63B instead: insist on length, refuse known-bad, otherwise stay out
+of the way. The blocklist is short on purpose; a real one is a file of several
+thousand breached passwords and swapping it in changes one constant.
+
+### Verified by running it
+
+- `Content-Security-Policy`, `X-Frame-Options`, `X-Content-Type-Options` present
+  on every response; `Strict-Transport-Security` appears as soon as a request
+  carries `X-Forwarded-Proto: https`, proving the forward-headers setting works
+- `Set-Cookie: JSESSIONID=...; Secure; HttpOnly; SameSite=Lax`
+- Chromium walked every page signed in with the CSP active: **no violations**,
+  and the JavaScript-driven features (password reveal, AJAX add-to-basket,
+  payment-method disclosure) all still work — a CSP that silently breaks the
+  site is worse than none
+- `POST /resend-verification` five times: `302, 302, 302, 429, 429`
+- `POST /login` until refused, with `Retry-After: 896`
+
+### Still open
+
+- **The database password was pasted into a chat transcript and should be
+  rotated.** No configuration change matters more than this one.
+- **The app connects as `neondb_owner`,** which can drop tables. A restricted
+  role with only `SELECT/INSERT/UPDATE/DELETE` would mean a stolen app
+  credential could not destroy the schema.
+- **`ipAllowList: []` in `render.yaml` is dead config** left from when the plan
+  was Render Postgres. Neon's free tier has no IP allowlist; TLS is what
+  protects the connection.
+- **Backups are unverified.** An untested restore is a hope, not a backup.
+- No 2FA, no audit log, and the `ADMIN` role still does nothing.
 
 ## Design notes
 

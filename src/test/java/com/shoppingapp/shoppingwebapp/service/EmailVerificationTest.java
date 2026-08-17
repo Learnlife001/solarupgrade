@@ -31,8 +31,8 @@ class EmailVerificationTest {
         RegistrationForm f = new RegistrationForm();
         f.setFullName("New Person");
         f.setEmail(email);
-        f.setPassword("password123");
-        f.setConfirmPassword("password123");
+        f.setPassword("sunny-rooftop-42");
+        f.setConfirmPassword("sunny-rooftop-42");
         return f;
     }
 

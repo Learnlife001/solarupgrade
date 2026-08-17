@@ -37,7 +37,7 @@
                 <button type="submit" class="button-primary">Add to basket</button>
             </form>
 
-            <p sec:authorize="!isAuthenticated()" class="note" style="margin-top:1.5rem">
+            <p sec:authorize="!isAuthenticated()" class="note mt-md">
                 <a th:href="@{/login}">Sign in</a> to add items to your basket.
             </p>
         </div>

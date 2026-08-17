@@ -605,6 +605,13 @@ input[type="number"].qty-input { width: 4.6rem; margin-top: 0; }
 }
 .add-status.is-error { color: var(--warn); }
 
+/* Spacing utilities, so no template needs an inline style attribute -- the
+   Content-Security-Policy forbids them, and the alternative was weakening the
+   policy with 'unsafe-inline' for the sake of six margins. */
+.mt-sm { margin-top: 1.25rem; }
+.mt-md { margin-top: 1.5rem; }
+.mt-lg { margin-top: 2rem; }
+
 /* Present to screen readers, absent from the layout. */
 .visually-hidden {
     position: absolute;

@@ -1,6 +1,7 @@
 package com.shoppingapp.shoppingwebapp.dto;
 
 import jakarta.validation.constraints.Email;
+import com.shoppingapp.shoppingwebapp.security.PasswordPolicy;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -13,8 +14,15 @@ public class RegistrationForm {
     @Email(message = "That does not look like a valid email address")
     private String email = "";
 
+    /*
+     * The length floor lives here so the field shows an error like any other.
+     * Everything else about the password -- blocklist, not containing the email
+     * -- is in PasswordPolicy and applied by the controller, because those
+     * checks need the other fields to make sense.
+     */
     @NotBlank(message = "Please choose a password")
-    @Size(min = 8, message = "Password must be at least 8 characters")
+    @Size(min = PasswordPolicy.MIN_LENGTH,
+            message = "Please use at least " + PasswordPolicy.MIN_LENGTH + " characters")
     private String password = "";
 
     @NotBlank(message = "Please confirm your password")

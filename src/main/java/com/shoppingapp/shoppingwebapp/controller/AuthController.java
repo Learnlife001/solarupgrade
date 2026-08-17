@@ -1,6 +1,7 @@
 package com.shoppingapp.shoppingwebapp.controller;
 
 import com.shoppingapp.shoppingwebapp.dto.RegistrationForm;
+import com.shoppingapp.shoppingwebapp.security.PasswordPolicy;
 import com.shoppingapp.shoppingwebapp.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
@@ -44,6 +45,12 @@ public class AuthController {
         }
         if (userService.emailTaken(registrationForm.getEmail())) {
             bindingResult.rejectValue("email", "email.taken", "An account with that email already exists");
+        }
+        // Length is checked by the annotation; this is the rest of the policy,
+        // which needs the email to spot a password built out of it.
+        String weak = PasswordPolicy.reject(registrationForm.getPassword(), registrationForm.getEmail());
+        if (weak != null && !bindingResult.hasFieldErrors("password")) {
+            bindingResult.rejectValue("password", "password.weak", weak);
         }
         if (bindingResult.hasErrors()) {
             return "register";

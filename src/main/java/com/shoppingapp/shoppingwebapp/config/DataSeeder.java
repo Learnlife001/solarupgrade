@@ -37,12 +37,12 @@ public class DataSeeder {
             }
             User demo = new User(
                     "demo@solarupgrade.example",
-                    passwordEncoder.encode("password123"),
+                    passwordEncoder.encode("sunny-rooftop-42"),
                     "Demo Customer");
             // Pre-verified: there is no inbox to collect a verification link from.
             demo.markEmailVerified();
             userRepository.save(demo);
-            log.info("Seeded demo account demo@solarupgrade.example / password123");
+            log.info("Seeded demo account demo@solarupgrade.example / sunny-rooftop-42");
         };
     }
 }

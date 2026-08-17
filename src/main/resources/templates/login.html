@@ -18,6 +18,17 @@
         This account has not been confirmed yet, so it cannot sign in.
     </div>
 
+    <!--
+      Deliberately says the account is paused rather than "too many wrong
+      passwords for this account", which would confirm to a stranger that the
+      address they guessed has an account here.
+    -->
+    <div class="flash error" th:if="${param.locked}">
+        <strong>Sign-in is paused for a few minutes.</strong>
+        There have been several failed attempts. Please wait a little and try
+        again &mdash; no action is needed on your part.
+    </div>
+
     <section class="panel">
         <form th:action="@{/login}" method="post">
             <label>
@@ -33,13 +44,13 @@
     </section>
 
     <!-- Only offered once the sign-in has actually been refused as unverified. -->
-    <section class="panel" th:if="${param.unverified}" style="margin-top:1.25rem">
+    <section class="panel mt-sm" th:if="${param.unverified}">
         <h2>Have a confirmation code?</h2>
         <p class="note">Enter the six-digit code we emailed you.</p>
         <a class="button-secondary button-block" th:href="@{/verify}">Enter code</a>
     </section>
 
-    <p class="note" style="margin-top:1.25rem">
+    <p class="note mt-sm">
         No account? <a th:href="@{/register}">Register</a>.
     </p>
 </main>
