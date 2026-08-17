@@ -43,34 +43,41 @@
     --maxw: 1120px;
 }
 
-@media (prefers-color-scheme: dark) {
-    :root {
-        --bg:          #0b1310;
-        --surface:     #14201a;
-        --surface-2:   #1c2b23;
-        --ink:         #eaf3ec;
-        --ink-2:       #a2b6a9;
-        --line:        #26362d;
-        --line-strong: #35493c;
+/*
+  Dark is opt-in, not automatic.
+  The site used to follow prefers-color-scheme, which meant anyone whose phone
+  or laptop was set to dark never saw the light design at all. A storefront
+  selling solar should look lit by default, so light is the default for
+  everyone and dark is reached by the header switch. theme.js writes
+  data-theme on <html> before first paint; with JavaScript off the attribute
+  is simply absent and the light tokens above apply.
+*/
+:root[data-theme="dark"] {
+    --bg:          #0b1310;
+    --surface:     #14201a;
+    --surface-2:   #1c2b23;
+    --ink:         #eaf3ec;
+    --ink-2:       #a2b6a9;
+    --line:        #26362d;
+    --line-strong: #35493c;
 
-        --accent:       #3ddc8a;
-        --accent-hover: #62e8a3;
-        --accent-soft:  #10301e;
-        --accent-ink:   #a8f5cb;
+    --accent:       #3ddc8a;
+    --accent-hover: #62e8a3;
+    --accent-soft:  #10301e;
+    --accent-ink:   #a8f5cb;
 
-        --sun:       #ffc247;
-        --sun-soft:  #33270d;
-        --sun-ink:   #ffd98a;
+    --sun:       #ffc247;
+    --sun-soft:  #33270d;
+    --sun-ink:   #ffd98a;
 
-        --warn:      #f0b249;
-        --warn-soft: #2e2413;
-        --danger:      #ff8a80;
-        --danger-soft: #33191a;
+    --warn:      #f0b249;
+    --warn-soft: #2e2413;
+    --danger:      #ff8a80;
+    --danger-soft: #33191a;
 
-        --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
-        --shadow-md: 0 4px 12px rgba(0, 0, 0, .45);
-        --shadow-lg: 0 12px 32px rgba(0, 0, 0, .55);
-    }
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, .45);
+    --shadow-lg: 0 12px 32px rgba(0, 0, 0, .55);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -153,6 +160,27 @@ img { max-width: 100%; display: block; }
     align-items: center;
     gap: .85rem;
     font-size: .92rem;
+}
+
+/* Quiet by design: the switch is a convenience, not a call to action, so it
+   reads as a border rather than competing with the basket. */
+.theme-toggle {
+    font: inherit;
+    font-size: .85rem;
+    font-weight: 550;
+    color: var(--ink-2);
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    padding: .3rem .7rem;
+    cursor: pointer;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.theme-toggle:hover {
+    color: var(--ink);
+    border-color: var(--ink-2);
 }
 
 .cart-link {
@@ -868,8 +896,8 @@ input[type="number"].qty-input { width: 4.6rem; margin-top: 0; }
    the theme. Only the hero keeps its own sky, being a scene rather than an
    object, so only the hero needs taking down a notch in the dark.
    --------------------------------------------------------------------------- */
-@media (prefers-color-scheme: dark) {
-    .hero-art img {
-        filter: brightness(.86) saturate(.95);
-    }
+/* The illustrations are drawn for a light page; knock them back a little so
+   they do not glare against the dark ground. */
+:root[data-theme="dark"] .hero-art img {
+    filter: brightness(.86) saturate(.95);
 }

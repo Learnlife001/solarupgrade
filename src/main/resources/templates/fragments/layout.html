@@ -8,6 +8,9 @@
     <!-- SVG favicon so the monogram stays sharp on any display. -->
     <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
     <link rel="stylesheet" th:href="@{/css/style.css}">
+    <!-- Not deferred: it must set the theme before the first paint, or a
+         reader who chose dark gets a white flash on every page. -->
+    <script th:src="@{/js/theme.js}"></script>
     <script th:src="@{/js/app.js}" defer></script>
 </head>
 
