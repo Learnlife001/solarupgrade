@@ -6,7 +6,10 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -15,6 +18,8 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 @Entity
@@ -56,6 +61,14 @@ public class Product {
     private int stock;
 
     private String imageUrl;
+
+    /**
+     * Ordered by sort_order so the table reads the way it was written rather
+     * than in whatever order the rows come back.
+     */
+    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
+    @OrderBy("sortOrder ASC")
+    private List<ProductSpec> specs = new ArrayList<>();
 
     protected Product() {
         // required by JPA
@@ -132,6 +145,10 @@ public class Product {
     /** Pre-formatted for the views, so no template repeats a format call. */
     public String getPriceDisplay() {
         return Money.base(price);
+    }
+
+    public List<ProductSpec> getSpecs() {
+        return specs;
     }
 
     public String getImageUrl() {

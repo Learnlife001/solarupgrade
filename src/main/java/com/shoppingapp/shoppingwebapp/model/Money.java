@@ -50,10 +50,20 @@ public final class Money {
         return SYMBOLS.getOrDefault(currencyCode, currencyCode + " ");
     }
 
+    /**
+     * Decimals only when there are any.
+     *
+     * <p>{@code ₦8,300,000.00} is how a spreadsheet writes it, not how a shop
+     * does -- and on seven-figure naira the trailing zeros are pure noise.
+     * Euro amounts still show their cents, because those are rarely whole.
+     */
     private static String grouped(BigDecimal amount) {
+        BigDecimal rounded = amount.setScale(2, RoundingMode.HALF_UP);
+        boolean whole = rounded.remainder(BigDecimal.ONE).signum() == 0;
         // Locale.ROOT pins the separators, so output does not shift with the
         // host's locale.
-        DecimalFormat format = new DecimalFormat("#,##0.00", new DecimalFormatSymbols(Locale.ROOT));
-        return format.format(amount.setScale(2, RoundingMode.HALF_UP));
+        DecimalFormat format = new DecimalFormat(whole ? "#,##0" : "#,##0.00",
+                new DecimalFormatSymbols(Locale.ROOT));
+        return format.format(rounded);
     }
 }

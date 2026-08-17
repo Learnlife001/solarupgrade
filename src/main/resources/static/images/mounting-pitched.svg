@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 360" role="img">
+<defs>
+<linearGradient id="cell" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0" stop-color="#2b4a7a"/><stop offset="1" stop-color="#10233d"/>
+</linearGradient>
+<linearGradient id="cell2" x1="0" y1="0" x2="1" y2="1">
+<stop offset="0" stop-color="#1b1f26"/><stop offset="1" stop-color="#0a0d12"/>
+</linearGradient>
+<linearGradient id="case" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#dbe4de"/>
+</linearGradient>
+<linearGradient id="sun" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#ffd257"/><stop offset="1" stop-color="#f2a712"/>
+</linearGradient>
+</defs>
+<path d="M60 250 L240 140 L420 250 Z" fill="#c98f6a"/><path d="M60 250 L240 140 L420 250 Z" fill="#000" opacity=".06"/><rect x="150" y="206" width="8" height="22" rx="3" fill="#7d8d9c"/><rect x="210" y="206" width="8" height="22" rx="3" fill="#7d8d9c"/><rect x="270" y="206" width="8" height="22" rx="3" fill="#7d8d9c"/><rect x="330" y="206" width="8" height="22" rx="3" fill="#7d8d9c"/><rect x="120" y="228" width="240" height="7" rx="3" fill="#9fb0c2"/><rect x="124" y="202" width="232" height="7" rx="3" fill="#9fb0c2"/><rect x="128" y="176" width="224" height="7" rx="3" fill="#9fb0c2"/></svg>

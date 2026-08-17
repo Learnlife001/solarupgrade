@@ -236,7 +236,9 @@ class OrderServiceTest {
         try {
             // German formatting would otherwise turn 1,234.50 into 1.234,50.
             Locale.setDefault(Locale.GERMANY);
-            assertThat(Money.base(new BigDecimal("2490000"))).isEqualTo("₦2,490,000.00");
+            // Whole amounts drop the decimals; fractional ones keep them.
+            assertThat(Money.base(new BigDecimal("2490000"))).isEqualTo("₦2,490,000");
+            assertThat(Money.base(new BigDecimal("2490000.50"))).isEqualTo("₦2,490,000.50");
             assertThat(Money.format(new BigDecimal("1383.33"), "EUR")).isEqualTo("€1,383.33");
         } finally {
             Locale.setDefault(original);

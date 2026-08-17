@@ -34,6 +34,29 @@ public class ProductService {
         return productRepository.findByNameContainingIgnoreCase(query.trim());
     }
 
+    /**
+     * The detail page's product, with its specification rows already loaded.
+     */
+    public Product getWithSpecs(Long id) {
+        return productRepository.findWithSpecsById(id)
+                .orElseThrow(() -> new NoSuchElementException("No product with id " + id));
+    }
+
+    /**
+     * Products from the categories this one is usually bought alongside.
+     *
+     * <p>Only what is in stock, never the product being viewed, and capped so
+     * the strip stays a suggestion rather than a second catalogue.
+     */
+    public List<Product> pairsWith(Product product, int limit) {
+        return productRepository
+                .findByCategoryInAndStockGreaterThanAndIdNot(
+                        product.getCategory().pairsWith(), 0, product.getId())
+                .stream()
+                .limit(limit)
+                .toList();
+    }
+
     public Product getById(Long id) {
         return productRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("No product with id " + id));

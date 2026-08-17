@@ -9,8 +9,6 @@
       <stop offset="100%" stop-color="#4ade80" stop-opacity="0"/>
     </linearGradient>
   </defs>
-
-  <rect width="400" height="300" fill="url(#monBg)"/>
   <ellipse cx="200" cy="262" rx="96" ry="11" fill="#0d1b2a" opacity=".12"/>
 
   <!-- device -->

@@ -1,6 +1,7 @@
 package com.shoppingapp.shoppingwebapp.controller;
 
 import com.shoppingapp.shoppingwebapp.model.Category;
+import com.shoppingapp.shoppingwebapp.model.Product;
 import com.shoppingapp.shoppingwebapp.service.ProductService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -39,7 +40,9 @@ public class ProductController {
 
     @GetMapping("/products/{id}")
     public String detail(@PathVariable Long id, Model model) {
-        model.addAttribute("product", productService.getById(id));
+        Product product = productService.getWithSpecs(id);
+        model.addAttribute("product", product);
+        model.addAttribute("pairsWith", productService.pairsWith(product, 3));
         return "product-detail";
     }
 }

@@ -14,7 +14,7 @@
             <img th:src="@{${product.image}}" th:alt="${product.name}">
         </div>
 
-        <div>
+        <div class="detail-buy">
             <p class="category" th:text="${product.category.displayName}">Category</p>
             <h1 th:text="${product.name}">Product</h1>
             <p class="price large"><span th:text="${product.priceDisplay}">0.00</span></p>
@@ -40,8 +40,59 @@
             <p sec:authorize="!isAuthenticated()" class="note mt-md">
                 <a th:href="@{/login}">Sign in</a> to add items to your basket.
             </p>
+
+            <!--
+              Delivery and payment sit beside the price rather than on a
+              separate page, because on a seven-figure order they are part of
+              the decision, not the small print.
+            -->
+            <ul class="detail-assurances">
+                <li><strong>Delivery included</strong> &mdash; 5 to 10 working days nationwide</li>
+                <li><strong>Card, PayPal or bank transfer</strong> &mdash; entered on the provider's own page</li>
+                <li><strong>Manufacturer warranty</strong> &mdash; terms in the specification below</li>
+            </ul>
         </div>
     </article>
+
+    <!--
+      Absent rather than empty: a product with no specification rows shows no
+      heading at all, instead of a caption over nothing.
+    -->
+    <section class="spec-block" th:if="${!#lists.isEmpty(product.specs)}">
+        <h2>Specification</h2>
+        <dl class="spec-list">
+            <div class="spec-row" th:each="spec : ${product.specs}">
+                <dt th:text="${spec.label}">Label</dt>
+                <dd th:text="${spec.value}">Value</dd>
+            </div>
+        </dl>
+        <p class="note">
+            Check the dimensions and weight against your roof or plant room before
+            ordering &mdash; a panel that does not fit is the most expensive mistake
+            on this page.
+        </p>
+    </section>
+
+    <section th:if="${!#lists.isEmpty(pairsWith)}" class="pairs-block">
+        <div class="section-head">
+            <h2>Usually bought with this</h2>
+            <p>Solar is a system, not a single part.</p>
+        </div>
+        <div class="product-grid">
+            <article class="product-card" th:each="other : ${pairsWith}">
+                <a class="product-thumb" th:href="@{/products/{id}(id=${other.id})}">
+                    <img th:src="@{${other.image}}" th:alt="${other.name}" loading="lazy">
+                </a>
+                <div class="product-body">
+                    <p class="category" th:text="${other.category.displayName}">Category</p>
+                    <h3>
+                        <a th:href="@{/products/{id}(id=${other.id})}" th:text="${other.name}">Product</a>
+                    </h3>
+                    <p class="price"><span th:text="${other.priceDisplay}">0.00</span></p>
+                </div>
+            </article>
+        </div>
+    </section>
 </main>
 
 <div th:replace="~{fragments/layout :: footer}"></div>

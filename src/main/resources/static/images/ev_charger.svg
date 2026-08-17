@@ -10,8 +10,6 @@
       <stop offset="100%" stop-color="#111a22"/>
     </linearGradient>
   </defs>
-
-  <rect width="400" height="300" fill="url(#evBg)"/>
   <ellipse cx="168" cy="256" rx="76" ry="12" fill="#0d1b2a" opacity=".12"/>
 
   <!-- wall plate -->

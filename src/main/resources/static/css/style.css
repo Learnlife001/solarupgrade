@@ -5,23 +5,32 @@
    --------------------------------------------------------------------------- */
 
 :root {
-    --bg:            #f4f7f5;
+    /* Brighter than the first pass: a clean white ground rather than a grey-
+       green wash, and a more saturated green so the accent actually carries.
+       Solar sells on light, so the page should look lit. */
+    --bg:            #fbfdfb;
     --surface:       #ffffff;
-    --surface-2:     #eef2f0;
-    --ink:           #12211a;
-    --ink-2:         #55655c;
-    --line:          #dde5e0;
-    --line-strong:   #c6d2cb;
+    --surface-2:     #f1f7f3;
+    --ink:           #0d1a14;
+    --ink-2:         #4d6156;
+    --line:          #e3ece6;
+    --line-strong:   #c9d8ce;
 
-    --accent:        #16794a;
-    --accent-hover:  #115f3a;
-    --accent-soft:   #e4f2ea;
-    --accent-ink:    #0c4d2e;
+    --accent:        #0f8f4f;
+    --accent-hover:  #0b7440;
+    --accent-soft:   #e2f7ea;
+    --accent-ink:    #06552e;
 
-    --warn:          #9a5b00;
-    --warn-soft:     #fdf1dd;
+    /* A warm second accent. Everything was one green before, which left
+       nothing to mark a price or a highlight with. */
+    --sun:           #f2a712;
+    --sun-soft:      #fff5e0;
+    --sun-ink:       #7a4d00;
+
+    --warn:          #96560a;
+    --warn-soft:     #fff3e0;
     --danger:        #b3261e;
-    --danger-soft:   #fbeae9;
+    --danger-soft:   #fdecea;
 
     --shadow-sm: 0 1px 2px rgba(11, 32, 22, .06), 0 1px 3px rgba(11, 32, 22, .04);
     --shadow-md: 0 4px 12px rgba(11, 32, 22, .07), 0 2px 4px rgba(11, 32, 22, .04);
@@ -36,18 +45,22 @@
 
 @media (prefers-color-scheme: dark) {
     :root {
-        --bg:          #0e1512;
-        --surface:     #16201b;
-        --surface-2:   #1d2a23;
-        --ink:         #e8f0ea;
-        --ink-2:       #9db0a4;
+        --bg:          #0b1310;
+        --surface:     #14201a;
+        --surface-2:   #1c2b23;
+        --ink:         #eaf3ec;
+        --ink-2:       #a2b6a9;
         --line:        #26362d;
-        --line-strong: #33473b;
+        --line-strong: #35493c;
 
-        --accent:       #34d17f;
-        --accent-hover: #56e099;
-        --accent-soft:  #14301f;
-        --accent-ink:   #9df0c2;
+        --accent:       #3ddc8a;
+        --accent-hover: #62e8a3;
+        --accent-soft:  #10301e;
+        --accent-ink:   #a8f5cb;
+
+        --sun:       #ffc247;
+        --sun-soft:  #33270d;
+        --sun-ink:   #ffd98a;
 
         --warn:      #f0b249;
         --warn-soft: #2e2413;
@@ -121,7 +134,7 @@ img { max-width: 100%; display: block; }
     width: 26px;
     height: 26px;
     border-radius: 7px;
-    background: linear-gradient(135deg, var(--accent), #7ddba6);
+    background: linear-gradient(135deg, var(--accent), var(--sun));
     display: grid;
     place-items: center;
     color: #062315;
@@ -286,7 +299,9 @@ img { max-width: 100%; display: block; }
 }
 
 .price { font-weight: 700; font-size: 1.16rem; margin: auto 0 0; letter-spacing: -.01em; }
-.price.large { font-size: 1.9rem; }
+/* The one number a buyer is looking for, so it gets the warm accent rather
+   than blending into the same green as everything else. */
+.price.large { font-size: 2.1rem; font-weight: 780; color: var(--sun-ink); }
 
 .badge {
     display: inline-block;
@@ -314,7 +329,15 @@ img { max-width: 100%; display: block; }
     padding: 2rem;
     box-shadow: var(--shadow-md);
 }
-.detail-art { border-radius: var(--r-md); overflow: hidden; background: var(--surface-2); }
+/* align-self keeps the art the height of the image. Without it the grid
+   stretched this column to match the text beside it and the surface-2
+   background showed as a bare slab under every product photo. */
+.detail-art {
+    align-self: start;
+    border-radius: var(--r-md);
+    overflow: hidden;
+    background: var(--surface-2);
+}
 .description { color: var(--ink-2); max-width: 54ch; }
 
 @media (max-width: 800px) {
@@ -699,6 +722,52 @@ input[type="number"].qty-input { width: 4.6rem; margin-top: 0; }
 
 .converted-note { margin: -.75rem 0 1.5rem; }
 
+/* --- Product detail: assurances, specs, cross-sell ------------------------- */
+
+.detail-buy { display: flex; flex-direction: column; }
+
+.detail-assurances {
+    list-style: none;
+    margin: 1.75rem 0 0;
+    padding: 1rem 1.1rem;
+    background: var(--surface-2);
+    border-radius: var(--r-md);
+    font-size: .89rem;
+    color: var(--ink-2);
+    display: grid;
+    gap: .5rem;
+}
+.detail-assurances strong { color: var(--ink); font-weight: 650; }
+
+.spec-block { margin-top: 3rem; }
+
+/* Two columns of rows on wide screens, one on narrow. Each row is its own
+   grid so a long value cannot drag its label out of line with the rest. */
+.spec-list {
+    margin: 0 0 1rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 0 2.5rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    padding: .5rem 1.25rem;
+}
+
+.spec-row {
+    display: grid;
+    grid-template-columns: minmax(9rem, 42%) 1fr;
+    gap: 1rem;
+    padding: .7rem 0;
+    border-bottom: 1px solid var(--line);
+    font-size: .92rem;
+}
+.spec-row:last-child { border-bottom: none; }
+.spec-row dt { color: var(--ink-2); }
+.spec-row dd { margin: 0; font-weight: 600; }
+
+.pairs-block { margin-top: 3rem; }
+
 /* --- Order line items ------------------------------------------------------ */
 
 .order-lines { list-style: none; margin: 0 0 1rem; padding: 0; }
@@ -741,6 +810,32 @@ input[type="number"].qty-input { width: 4.6rem; margin-top: 0; }
     .order-line-total { grid-column: 2; }
 }
 
+/* --- Narrow screens: side-on cards ----------------------------------------
+   One column of tall cards meant ten products filled about thirteen screens,
+   because the illustration took most of each card. Turning the card on its
+   side puts the picture, the name and the price in one glance and cuts the
+   page to roughly a third of its height. */
+@media (max-width: 620px) {
+    .product-grid { grid-template-columns: 1fr; gap: .75rem; }
+
+    .product-card {
+        flex-direction: row;
+        align-items: stretch;
+    }
+    .product-card:hover { transform: none; }
+
+    .product-thumb {
+        flex: 0 0 108px;
+        aspect-ratio: auto;
+        border-bottom: 0;
+        border-right: 1px solid var(--line);
+    }
+
+    .product-body { padding: .85rem .95rem; gap: .2rem; }
+    .product-body h3 { font-size: .97rem; }
+    .product-card .price { font-size: 1.05rem; }
+}
+
 /* --- Order list items ------------------------------------------------------ */
 
 .order-items ul { list-style: none; margin: 0; padding: 0; }
@@ -768,15 +863,13 @@ input[type="number"].qty-input { width: 4.6rem; margin-top: 0; }
 .trust-item span { color: var(--ink-2); font-size: .87rem; }
 
 /* ---------------------------------------------------------------------------
-   The product illustrations carry their own light background, the way product
-   photography does. Against the dark theme that reads as glare, so take the
-   edge off rather than shipping two sets of artwork.
+   The product illustrations no longer carry a background of their own -- the
+   thumbnail container paints it, so the artwork sits on surface-2 and follows
+   the theme. Only the hero keeps its own sky, being a scene rather than an
+   object, so only the hero needs taking down a notch in the dark.
    --------------------------------------------------------------------------- */
 @media (prefers-color-scheme: dark) {
-    .product-thumb img,
-    .detail-art img,
-    .hero-art img,
-    .cart-product img {
-        filter: brightness(.82) saturate(.9);
+    .hero-art img {
+        filter: brightness(.86) saturate(.95);
     }
 }

@@ -312,6 +312,37 @@ pins this by formatting under `Locale.GERMANY`.
 The seeded catalogue prices are placeholders converted at a round rate. Set real
 ones before taking real money.
 
+**Product specifications are a key-value table, not columns.** The attributes
+genuinely differ by category -- a panel has a cell count and a module
+efficiency, a battery has a chemistry and a cycle life, a mounting kit has a
+wind load -- so columns on `products` would be a wide table that is mostly null.
+The column is `spec_value` rather than `value` because `VALUE` is a reserved
+word in H2, which refuses the `CREATE TABLE` outright while Postgres and MySQL
+accept it.
+
+> **The seeded specification values are invented.** They were not taken from any
+> datasheet. Publishing made-up dimensions or warranty terms is worse than
+> publishing none -- someone orders panels that do not fit their roof, or
+> believes a warranty that does not exist. Replace every row with the
+> manufacturer's own figures before selling against them.
+
+**"Usually bought with this" is a relationship between categories, not SKUs.**
+`Category.pairsWith()` holds it, because a solar install is a system: panels
+need an inverter and something to bolt them to, an inverter without storage is
+daytime-only. That does not change when the catalogue does, so it needs no
+schema and no maintenance.
+
+**Every product has its own illustration.** `Product.getImage()` still falls
+back to a category picture, but no seeded product relies on that now. It used
+to: eight of the ten showed a duplicate, so both panels, both inverters, both
+batteries and both mounting kits were the same picture at different prices --
+which on a grid reads as a broken shop rather than a range.
+
+**The illustrations carry no background of their own.** The thumbnail container
+paints `surface-2`, so the artwork follows the theme instead of glowing as a
+pale slab in dark mode. Only the hero keeps its own sky, being a scene rather
+than an object.
+
 **Order lines snapshot the product name and price** at purchase time
 (`OrderItem.unitPrice`). Repricing or renaming a catalogue item never rewrites
 the value of an order already placed — `OrderTest` covers this.
