@@ -89,32 +89,37 @@
     </p>
 
     <!--
-      Stand-in for payment capture. Wiring a provider up replaces this form with
-      a redirect to its hosted page, and OrderService.markPaid is then called
-      only by the provider's webhook once a capture is actually confirmed --
-      never by the browser coming back, which proves nothing.
+      Shown only where a provider can actually take the money. The button used
+      to appear for every method and marked the order paid itself when no
+      provider was configured, which made it a way for a buyer to settle their
+      own order. The status now changes only on a confirmed capture.
     -->
-    <form th:if="${order.status.name() == 'PENDING_PAYMENT'}"
-          th:action="@{/orders/{id}/pay(id=${order.id})}" method="post" class="pay-form">
-        <button type="submit" class="button-primary">
-            <span th:if="${order.paymentMethod != null and order.paymentMethod.name() == 'PAYPAL'}">
-                Continue to PayPal</span>
-            <span th:if="${order.paymentMethod != null and order.paymentMethod.name() == 'BANK_TRANSFER'}">
-                Show transfer details</span>
-            <span th:unless="${order.paymentMethod != null and
-                              (order.paymentMethod.name() == 'PAYPAL' or order.paymentMethod.name() == 'BANK_TRANSFER')}">
-                Pay now</span>
-        </button>
-        <span class="note" th:if="${paymentIsLive}">
-            You will be taken to PayPal to pay
-            <strong th:text="${order.chargeDisplay}">€0.00</strong>.
-            This order is only marked paid once PayPal confirms the money moved.
-        </span>
-        <span class="note" th:unless="${paymentIsLive}">
-            Placeholder &mdash; no provider is wired up for this method yet, so this
-            just marks the order paid.
-        </span>
-    </form>
+    <div th:if="${order.status.name() == 'PENDING_PAYMENT'}">
+        <form th:if="${paymentIsLive}"
+              th:action="@{/orders/{id}/pay(id=${order.id})}" method="post" class="pay-form">
+            <button type="submit" class="button-primary">Continue to PayPal</button>
+            <span class="note">
+                You will be taken to PayPal to pay
+                <strong th:text="${order.chargeDisplay}">€0.00</strong>.
+                This order is only marked paid once PayPal confirms the money moved.
+            </span>
+        </form>
+
+        <!--
+          An order placed before its method was withdrawn, or with one that is
+          not connected yet. Honest about the state rather than offering a
+          button that would fail.
+        -->
+        <p class="note" th:unless="${paymentIsLive}">
+            <strong>This order cannot be paid here yet.</strong>
+            <span th:if="${order.paymentMethod != null}"
+                  th:text="${order.paymentMethod.displayName} + ' is not connected to a payment provider at the moment.'">
+                Method unavailable.
+            </span>
+            Nothing has been charged and your order is held. Place it again
+            choosing PayPal, or contact us and we will arrange payment.
+        </p>
+    </div>
 
     <p class="mt-lg"><a th:href="@{/orders}">&larr; All orders</a></p>
 </main>

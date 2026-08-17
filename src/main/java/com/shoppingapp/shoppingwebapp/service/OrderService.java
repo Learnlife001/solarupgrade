@@ -57,7 +57,7 @@ public class OrderService {
      * <p>The order is left in {@link OrderStatus#PENDING_PAYMENT}, with the
      * customer's chosen payment method recorded on it. That choice is what a
      * provider needs to be told at capture time; capture itself is where the
-     * integration belongs, see {@link #markPaid(Long, User)}.
+     * integration belongs, see {@link #markPaid(Order)}.
      */
     @Transactional
     public Order placeOrder(User user, CheckoutForm form) {
@@ -108,15 +108,16 @@ public class OrderService {
         return (value == null || value.isBlank()) ? null : value.trim();
     }
 
-    /** Scoped by user, for the paths where one is signed in. */
-    @Transactional
-    public Order markPaid(Long orderId, User user) {
-        return markPaid(getForUser(orderId, user));
-    }
-
     /**
      * The single place an order becomes PAID, whichever route the news arrived
-     * by -- a capture on the customer's return, a webhook, or the stand-in.
+     * by -- a capture on the customer's return, or a webhook.
+     *
+     * <p>It takes an Order rather than an id on purpose. There was an overload
+     * that looked up the order from an id and the signed-in user, and it read
+     * as a permission check while being nothing of the sort: the customer is
+     * exactly the person who should not decide that their own order is paid.
+     * Requiring the loaded order means a caller has to have got it from a
+     * provider's answer, which is the only thing that settles anything.
      *
      * <p>The status change and the confirmation email are deliberately welded
      * together here. The alternative, emailing from each caller, is how a

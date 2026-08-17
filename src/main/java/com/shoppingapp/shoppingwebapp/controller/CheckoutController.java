@@ -65,6 +65,7 @@ public class CheckoutController {
         model.addAttribute("chargeByMethod", chargeByMethod(total));
         model.addAttribute("nairaPerEuro", Money.base(exchangeRates.nairaPerEuro()));
         model.addAttribute("paymentMethods", PaymentMethod.offered());
+        model.addAttribute("comingSoon", PaymentMethod.comingSoon());
         model.addAttribute("countries", Country.all());
     }
 
@@ -91,11 +92,17 @@ public class CheckoutController {
                          RedirectAttributes redirectAttributes) {
         User user = currentUser.require(principal);
 
+        // The radio list only contains methods we can charge on, but a form
+        // post is not bound by what the page offered. Anything else is
+        // rejected here rather than becoming an order nobody can pay for.
+        PaymentMethod chosen = checkoutForm.getPaymentMethod();
+        if (chosen != null && !chosen.isOffered()) {
+            bindingResult.rejectValue("paymentMethod", "paymentMethod.unavailable",
+                    "That payment method is not available at the moment.");
+        }
+
         if (bindingResult.hasErrors()) {
-            model.addAttribute("items", cartService.itemsFor(user));
-            model.addAttribute("total", cartService.totalFor(user));
-            model.addAttribute("paymentMethods", PaymentMethod.offered());
-        model.addAttribute("countries", Country.all());
+            addTotals(model, user);
             return "checkout";
         }
 

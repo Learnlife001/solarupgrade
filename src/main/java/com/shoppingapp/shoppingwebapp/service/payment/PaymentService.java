@@ -3,7 +3,6 @@ package com.shoppingapp.shoppingwebapp.service.payment;
 import com.shoppingapp.shoppingwebapp.model.Order;
 import com.shoppingapp.shoppingwebapp.model.OrderStatus;
 import com.shoppingapp.shoppingwebapp.model.PaymentMethod;
-import com.shoppingapp.shoppingwebapp.model.User;
 import com.shoppingapp.shoppingwebapp.repository.OrderRepository;
 import com.shoppingapp.shoppingwebapp.service.OrderService;
 import org.slf4j.Logger;
@@ -84,7 +83,7 @@ public class PaymentService {
      * @return true when the order is paid as a result (or already was)
      */
     @Transactional
-    public boolean completePayPal(Order order, User user) {
+    public boolean completePayPal(Order order) {
         if (order.getStatus() == OrderStatus.PAID) {
             // Already settled, most likely by the webhook getting here first.
             return true;
@@ -108,7 +107,7 @@ public class PaymentService {
             throw new PaymentException("Captured amount does not match order " + order.getId());
         }
 
-        orderService.markPaid(order.getId(), user);
+        orderService.markPaid(order);
         log.info("Order {} paid via PayPal {}", order.getId(), reference);
         return true;
     }

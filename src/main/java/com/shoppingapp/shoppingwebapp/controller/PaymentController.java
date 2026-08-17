@@ -74,7 +74,7 @@ public class PaymentController {
         Order order = orderService.getForUser(orderId, user);
 
         try {
-            if (paymentService.completePayPal(order, user)) {
+            if (paymentService.completePayPal(order)) {
                 redirectAttributes.addFlashAttribute("message", "Payment received — thank you.");
             } else {
                 redirectAttributes.addFlashAttribute("error",

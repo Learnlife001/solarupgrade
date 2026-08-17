@@ -112,8 +112,9 @@ customers to the test PayPal, where no money moves and no order ever settles,
 and nothing would say so.
 
 Leave them unset and the app still runs: `PayPalClient` is never registered, the
-method is reported not-live, and the order page falls back to its stand-in
-button. Set the first three but not the webhook id and payments still work
+method is reported not-live, and the order page shows an explanation in place of
+a pay button — nothing on this site can settle an order by itself. Set the first
+three but not the webhook id and payments still work
 through the return-and-capture path — the webhook endpoint just ignores
 everything, because without the id it cannot tell a genuine notification from a
 forged one.
@@ -284,8 +285,9 @@ question of what an order was "really" worth.
 **PayPal is the exception, and it is charged in euro.** PayPal has no naira
 support, so a naira-only site could not offer it at all. The receiving account is
 a German one, so euro lands there natively instead of being converted twice.
-Card and bank transfer settle through a Nigerian provider and are charged the
-naira figure unchanged.
+Card and bank transfer are to settle through a Nigerian provider, charged the
+naira figure unchanged; they are held back from checkout until that provider is
+connected.
 
 The checkout states the exact amount each method will ask for, next to that
 method — nobody should pick PayPal and then meet an unexplained number on
@@ -379,17 +381,26 @@ perfectly correct address. A missing optional field is stored as `null`, never
 as `""`: "no postcode" and "an empty postcode" must not be two different things.
 `Order.getShippingLines()` assembles the label, so no view decides the layout.
 
-**The payment method is recorded; payment is not taken.** Checkout offers card,
-PayPal and Nigerian bank transfer, and stores the choice on the order. That
-choice is the half of a payment integration that is useful without a provider:
-it is what the provider must be told at capture time, and what support needs to
-see afterwards. Each option says what happens next, revealed under the one
-selected.
+**A method is offered only when something can charge on it.** Checkout offers
+PayPal alone today. Card and Nigerian bank transfer are `COMING_SOON` and do not
+appear, because nothing can take money on them yet; they return when OPay is
+connected. `PaymentMethod.Availability` carries that distinction — `OFFERED`,
+`COMING_SOON`, `WITHDRAWN` — and the checkout page names the coming ones so a
+customer who wanted transfer is told rather than left hunting.
 
-Apple Pay, SEPA and Klarna were withdrawn but survive as `PaymentMethod`
-constants marked not-offered. Deleting them would make Hibernate throw on any
-order already placed with one, turning a historical row into a broken page;
-`PaymentMethod.offered()` is what the checkout renders.
+This replaced a stand-in that was worse than nothing. Every method got a pay
+button, and where no provider was configured that button called `markPaid`
+itself. The form belonged to the buyer, so choosing card and pressing it marked
+their own order paid. `OrderService.markPaid` now takes a loaded `Order` and the
+id-and-user overload is gone, because that overload read like a permission check
+while being the opposite: the customer is exactly the person who must not decide
+their order is paid.
+
+Apple Pay, SEPA and Klarna are `WITHDRAWN` but survive as `PaymentMethod`
+constants. Deleting them would make Hibernate throw on any order already placed
+with one, turning a historical row into a broken page. The enum is persisted as
+a name rather than an ordinal, so constants can be reordered or regrouped
+without touching stored rows.
 
 **No card number, IBAN or bank detail is collected anywhere,** and the schema has
 nowhere to put one. Those belong on the provider's own hosted page or embedded
@@ -398,9 +409,10 @@ to type a real one into an app that cannot process or protect it.
 
 **PayPal is integrated.** Choosing it creates a PayPal order for the exact
 amount snapshotted on our order, sends the buyer to PayPal's own page, and
-captures on their return. Card and bank transfer stay on the stand-in until OPay
-is wired up; `PaymentService.isLive` decides which the order page offers, so an
-unconfigured provider degrades to the placeholder rather than to a broken button.
+captures on their return. `PaymentService.isLive` decides whether the order page
+shows a pay button at all, so an unconfigured provider degrades to an honest
+explanation rather than to a broken button — or, as it once did, to a button
+that marked the order paid for free.
 
 **An order becomes `PAID` only because a provider told us, in an exchange we
 started, that money moved.** The buyer arriving back at the return URL is not

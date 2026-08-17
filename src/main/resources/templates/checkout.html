@@ -127,6 +127,20 @@
                     </label>
                 </fieldset>
 
+                <!--
+                  Named, not silently missing. Someone who came here intending
+                  to pay by transfer should be told it is coming rather than
+                  left hunting for the option.
+                -->
+                <p class="note" th:if="${!#lists.isEmpty(comingSoon)}">
+                    <strong>Coming shortly:</strong>
+                    <span th:each="method, iter : ${comingSoon}">
+                        <span th:text="${method.displayName}">Method</span><span
+                              th:if="${!iter.last}">, </span></span>.
+                    We are finishing the connection to our Nigerian payment
+                    provider and will not take an order we cannot charge for.
+                </p>
+
                 <button type="submit" class="button-primary button-block">Place order</button>
             </form>
         </section>

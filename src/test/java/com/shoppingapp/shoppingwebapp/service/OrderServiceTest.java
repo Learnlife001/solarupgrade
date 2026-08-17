@@ -165,8 +165,11 @@ class OrderServiceTest {
 
     @Test
     void withdrawnMethodsAreNotOfferedButStillLoadOnOldOrders() {
-        assertThat(PaymentMethod.offered())
-                .containsExactly(PaymentMethod.CARD, PaymentMethod.PAYPAL, PaymentMethod.BANK_TRANSFER);
+        // Only PayPal can actually take money today, so only PayPal is
+        // choosable. Card and transfer are held back until OPay is connected.
+        assertThat(PaymentMethod.offered()).containsExactly(PaymentMethod.PAYPAL);
+        assertThat(PaymentMethod.comingSoon())
+                .containsExactly(PaymentMethod.CARD, PaymentMethod.BANK_TRANSFER);
 
         // Kept as constants on purpose: an order placed with one of these must
         // still render rather than throwing on an unknown enum name.
@@ -250,7 +253,7 @@ class OrderServiceTest {
         cartService.add(user, panel, 1);
         Order order = orderService.placeOrder(user, checkoutForm());
 
-        Order paid = orderService.markPaid(order.getId(), user);
+        Order paid = orderService.markPaid(order);
 
         assertThat(paid.getStatus()).isEqualTo(OrderStatus.PAID);
     }

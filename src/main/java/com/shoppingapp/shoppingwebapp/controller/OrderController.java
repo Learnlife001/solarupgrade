@@ -55,8 +55,8 @@ public class OrderController {
         Order order = orderService.getForUser(id, user);
         model.addAttribute("order", order);
         model.addAttribute("justPlaced", placed != null);
-        // Drives the button's wording: a live provider means leaving the site,
-        // the stand-in does not.
+        // Decides whether there is a pay button at all: a method with no
+        // provider behind it gets an explanation instead of a control.
         model.addAttribute("paymentIsLive", paymentService.isLive(order.getPaymentMethod()));
         return "order-summary";
     }
@@ -64,29 +64,36 @@ public class OrderController {
     /**
      * Starts payment for an order.
      *
-     * <p>Where a provider is actually configured for the chosen method, this
-     * hands off to it and the order is only marked paid once that provider
-     * confirms a capture. Where none is, it falls back to the stand-in that
-     * flips the status directly — clearly labelled on the page, and the only
-     * reason it still exists is that OPay is not wired up yet.
+     * <p>This endpoint cannot mark an order paid. It hands off to a provider,
+     * and the order becomes PAID only when that provider confirms a capture,
+     * on a call we made to them.
+     *
+     * <p>It used to end with a stand-in that flipped the status directly when
+     * no provider was configured. That made the button a way for any buyer to
+     * pay for their own order by pressing it: the form was theirs to post, so
+     * the goods were theirs to take. A method with nothing behind it now
+     * refuses, and says so.
      */
     @PostMapping("/{id}/pay")
     public String pay(@PathVariable Long id, Principal principal, RedirectAttributes redirectAttributes) {
         User user = currentUser.require(principal);
         Order order = orderService.getForUser(id, user);
 
-        if (paymentService.isLive(order.getPaymentMethod())) {
-            try {
-                return "redirect:" + paymentService.beginPayPal(order);
-            } catch (PaymentException ex) {
-                log.warn("Could not start PayPal payment for order {}", id, ex);
-                redirectAttributes.addFlashAttribute("error",
-                        "We could not reach PayPal just now. Nothing has been charged — please try again.");
-                return "redirect:/orders/" + id;
-            }
+        if (!paymentService.isLive(order.getPaymentMethod())) {
+            log.warn("Payment attempted on order {} with unavailable method {}",
+                    id, order.getPaymentMethod());
+            redirectAttributes.addFlashAttribute("error",
+                    "That payment method is not available yet. Nothing has been charged.");
+            return "redirect:/orders/" + id;
         }
 
-        orderService.markPaid(id, user);
-        return "redirect:/orders/" + id;
+        try {
+            return "redirect:" + paymentService.beginPayPal(order);
+        } catch (PaymentException ex) {
+            log.warn("Could not start PayPal payment for order {}", id, ex);
+            redirectAttributes.addFlashAttribute("error",
+                    "We could not reach PayPal just now. Nothing has been charged — please try again.");
+            return "redirect:/orders/" + id;
+        }
     }
 }

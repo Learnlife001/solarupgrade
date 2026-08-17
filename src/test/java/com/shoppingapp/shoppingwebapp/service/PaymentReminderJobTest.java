@@ -124,7 +124,7 @@ class PaymentReminderJobTest {
     void aPaidOrderIsNeverChased() {
         Order order = unpaidOrder();
         backdate(order, 48);
-        orderService.markPaid(order.getId(), user);
+        orderService.markPaid(order);
 
         job.sendDueReminders();
 
