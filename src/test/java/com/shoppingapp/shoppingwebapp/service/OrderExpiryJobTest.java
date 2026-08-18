@@ -147,7 +147,7 @@ class OrderExpiryJobTest {
     void cancellingAnAlreadyCancelledOrderReportsThatItDidNothing() {
         Order order = unpaidOrder(1);
 
-        assertThat(orderService.cancelUnpaid(order)).isTrue();
-        assertThat(orderService.cancelUnpaid(order)).isFalse();
+        assertThat(orderService.cancelUnpaid(order.getId())).isTrue();
+        assertThat(orderService.cancelUnpaid(order.getId())).isFalse();
     }
 }

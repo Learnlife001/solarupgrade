@@ -127,6 +127,10 @@ public class SecurityConfig {
                     if (h2Console) {
                         auth.requestMatchers(H2_CONSOLE).permitAll();
                     }
+                    // The back office. One rule for the whole tree rather than
+                    // an annotation per method: a new admin page must not be
+                    // able to arrive unguarded because someone forgot one.
+                    auth.requestMatchers("/admin/**").hasRole("ADMIN");
                     auth.anyRequest().authenticated();
                 })
                 .formLogin(form -> form

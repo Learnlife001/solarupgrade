@@ -30,4 +30,24 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     /** Unpaid and past the point where its stock should go back on the shelf. */
     @EntityGraph(attributePaths = {"items", "items.product"})
     List<Order> findByStatusAndPlacedAtBefore(OrderStatus status, Instant placedBefore);
+
+    /*
+     * Admin views. Every order, not one customer's -- the only place in the
+     * application that reads across users, which is why the paths that use
+     * these are the only ones behind ROLE_ADMIN.
+     *
+     * The user is fetched alongside the items because the admin list shows who
+     * ordered, and open-in-view is off: a lazy read of order.user would fail
+     * once the template started rendering.
+     */
+    @EntityGraph(attributePaths = {"items", "items.product", "user"})
+    List<Order> findAllByOrderByPlacedAtDesc();
+
+    @EntityGraph(attributePaths = {"items", "items.product", "user"})
+    List<Order> findByStatusOrderByPlacedAtDesc(OrderStatus status);
+
+    @EntityGraph(attributePaths = {"items", "items.product", "user"})
+    Optional<Order> findWithItemsById(Long id);
+
+    long countByStatus(OrderStatus status);
 }

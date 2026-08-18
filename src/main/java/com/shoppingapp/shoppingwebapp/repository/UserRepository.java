@@ -1,8 +1,10 @@
 package com.shoppingapp.shoppingwebapp.repository;
 
+import com.shoppingapp.shoppingwebapp.model.Role;
 import com.shoppingapp.shoppingwebapp.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Long> {
@@ -16,4 +18,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * customer's email, and the column holds what it hashes to.
      */
     Optional<User> findByResetTokenHash(String resetTokenHash);
+
+    /** Used by AdminBootstrap to take the role back off anyone no longer listed. */
+    List<User> findByRole(Role role);
 }

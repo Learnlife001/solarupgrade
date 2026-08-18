@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/layout :: head('Stock · SolarUpgrade admin')}"></head>
+<body>
+
+<div th:replace="~{admin/layout :: header}"></div>
+
+<main class="container">
+    <h1>Stock</h1>
+    <div th:replace="~{admin/layout :: flash}"></div>
+
+    <p class="note">
+        Lowest first. The figure is what is on the shelf, not a change to it —
+        count, then type the count. Orders take stock out on their own, so
+        anything you type here replaces whatever they left.
+    </p>
+
+    <table class="admin-table">
+        <thead>
+        <tr>
+            <th>Product</th>
+            <th>Category</th>
+            <th class="numeric">Price</th>
+            <th class="numeric">In stock</th>
+            <th>Set to</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="product : ${products}">
+            <td>
+                <a th:href="@{/products/{id}(id=${product.id})}" th:text="${product.name}">Name</a>
+            </td>
+            <td th:text="${product.category.displayName}">Category</td>
+            <td class="numeric" th:text="${product.priceDisplay}">₦0</td>
+            <td class="numeric">
+                <span th:text="${product.stock}">0</span>
+                <span class="badge low" th:if="${product.stock < lowStockThreshold and product.stock > 0}">low</span>
+                <span class="badge out" th:if="${product.stock == 0}">out</span>
+            </td>
+            <td>
+                <form th:action="@{/admin/products/{id}/stock(id=${product.id})}" method="post"
+                      class="stock-form">
+                    <input type="number" name="stock" min="0" th:value="${product.stock}"
+                           class="qty-input" aria-label="New stock level">
+                    <button type="submit" class="button-secondary button-small">Save</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+
+</body>
+</html>

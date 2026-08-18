@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/layout :: head('Dashboard · SolarUpgrade admin')}"></head>
+<body>
+
+<div th:replace="~{admin/layout :: header}"></div>
+
+<main class="container">
+    <h1>Dashboard</h1>
+    <div th:replace="~{admin/layout :: flash}"></div>
+
+    <div class="admin-stats">
+        <a class="admin-stat" th:href="@{/admin/orders(status='PAID')}">
+            <span class="admin-stat-figure" th:text="${paidCount}">0</span>
+            <span class="admin-stat-label">Paid, awaiting dispatch</span>
+        </a>
+        <a class="admin-stat" th:href="@{/admin/orders(status='PENDING_PAYMENT')}">
+            <span class="admin-stat-figure" th:text="${pendingCount}">0</span>
+            <span class="admin-stat-label">Awaiting payment</span>
+        </a>
+        <a class="admin-stat" th:href="@{/admin/orders(status='SHIPPED')}">
+            <span class="admin-stat-figure" th:text="${shippedCount}">0</span>
+            <span class="admin-stat-label">Shipped</span>
+        </a>
+        <a class="admin-stat" th:href="@{/admin/products}">
+            <span class="admin-stat-figure" th:text="${lowStockCount}">0</span>
+            <span class="admin-stat-label">
+                Low stock (under <span th:text="${lowStockThreshold}">3</span>)
+            </span>
+        </a>
+    </div>
+
+    <!--
+      Paid but not yet shipped leads the page because it is the only list with
+      somebody waiting at the other end of it.
+    -->
+    <section class="mt-lg">
+        <div class="section-head">
+            <h2>To dispatch</h2>
+            <p>Paid for and not yet sent.</p>
+        </div>
+
+        <p class="note" th:if="${#lists.isEmpty(toShip)}">
+            Nothing waiting. Every paid order has been dispatched.
+        </p>
+
+        <table class="admin-table" th:unless="${#lists.isEmpty(toShip)}">
+            <thead>
+            <tr>
+                <th>Order</th>
+                <th>Placed</th>
+                <th>Customer</th>
+                <th>Items</th>
+                <th class="numeric">Total</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="order : ${toShip}">
+                <td>
+                    <a th:href="@{/admin/orders/{id}(id=${order.id})}"
+                       th:text="'#' + ${order.id}">#1</a>
+                </td>
+                <td th:text="${order.placedAtShortDisplay}">1 Jan</td>
+                <td th:text="${order.shippingName}">Name</td>
+                <td th:text="${order.itemCount}">0</td>
+                <td class="numeric" th:text="${order.totalDisplay}">₦0</td>
+                <td>
+                    <a class="button-secondary button-small"
+                       th:href="@{/admin/orders/{id}(id=${order.id})}">Open</a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+</main>
+
+</body>
+</html>

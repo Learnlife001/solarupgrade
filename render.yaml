@@ -97,3 +97,27 @@ services:
       # customer is chased before the order lapses rather than after.
       - key: APP_ORDER_EXPIRY_AFTER_HOURS
         value: "72"
+
+      # --- Admin ------------------------------------------------------------
+      # Comma-separated addresses that hold ROLE_ADMIN. The accounts must
+      # already exist: register and verify through the ordinary front door
+      # first, then name them here. This variable is the whole truth about who
+      # is an administrator — an address removed from it loses the role on the
+      # next start. sync: false so the list is not committed.
+      - key: APP_ADMIN_EMAILS
+        sync: false
+
+      # Hostname whose front page opens on the admin dashboard instead of the
+      # shop. Set it once a domain actually points here; /admin works on the
+      # main address regardless, and the admin area is protected by the role
+      # rather than by which hostname was used.
+      #
+      # Note: Render cannot issue admin.solarupgrade.onrender.com. An
+      # onrender.com address is <service-name>.onrender.com and goes no deeper,
+      # so the choices are a custom domain (admin.yourdomain.com, added under
+      # Settings -> Custom Domains and pointed here with a CNAME) or a second
+      # service named admin-solarupgrade. A custom domain is the better one:
+      # a second service is a second container, a second cold start, and a
+      # second copy to keep in step.
+      - key: APP_ADMIN_HOST
+        sync: false

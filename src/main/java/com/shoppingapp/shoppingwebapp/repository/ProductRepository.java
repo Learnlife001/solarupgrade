@@ -22,6 +22,11 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @EntityGraph(attributePaths = "specs")
     Optional<Product> findWithSpecsById(Long id);
 
+    /** Admin stock list: whatever is running out floats to the top. */
+    List<Product> findAllByOrderByStockAscNameAsc();
+
+    long countByStockLessThan(int threshold);
+
     /** For the "pairs with" strip: in stock, and never the product being viewed. */
     List<Product> findByCategoryInAndStockGreaterThanAndIdNot(
             List<Category> categories, int minimumStock, Long excludedId);

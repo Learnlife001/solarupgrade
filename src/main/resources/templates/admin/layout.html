@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<!--
+  The admin shell. Deliberately not the shop's header: the bar is dark and
+  labelled, because the one mistake worth designing against is doing something
+  administrative while believing you are looking at the customer site.
+-->
+<head th:fragment="head(pageTitle)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${pageTitle}">Admin · SolarUpgrade</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <script th:src="@{/js/theme.js}"></script>
+</head>
+
+<body>
+
+<header th:fragment="header" class="admin-bar">
+    <div class="admin-bar-inner">
+        <a class="admin-brand" th:href="@{/admin}">
+            SolarUpgrade <span>admin</span>
+        </a>
+
+        <nav class="admin-nav">
+            <a th:href="@{/admin}">Dashboard</a>
+            <a th:href="@{/admin/orders}">Orders</a>
+            <a th:href="@{/admin/products}">Stock</a>
+        </nav>
+
+        <div class="admin-actions">
+            <!-- A way back to the customer site, so nobody edits the URL by hand. -->
+            <a th:href="@{/products}">View shop</a>
+            <span class="admin-who" sec:authentication="name">admin</span>
+            <form th:action="@{/logout}" method="post" class="inline-form">
+                <button type="submit" class="link-button">Sign out</button>
+            </form>
+        </div>
+    </div>
+</header>
+
+<div th:fragment="flash">
+    <p class="flash" th:if="${message}" th:text="${message}"></p>
+    <p class="flash error" th:if="${error}" th:text="${error}"></p>
+</div>
+
+</body>
+</html>

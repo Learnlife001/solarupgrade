@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/layout :: head('Order · SolarUpgrade admin')}"></head>
+<body>
+
+<div th:replace="~{admin/layout :: header}"></div>
+
+<main class="container">
+    <p class="breadcrumb"><a th:href="@{/admin/orders}">&larr; All orders</a></p>
+
+    <h1>Order <span th:text="'#' + ${order.id}">#1</span></h1>
+    <div th:replace="~{admin/layout :: flash}"></div>
+
+    <div class="admin-columns">
+        <section class="panel">
+            <h2>Items</h2>
+            <table class="admin-table">
+                <tbody>
+                <tr th:each="item : ${order.items}">
+                    <td th:text="${item.quantity} + ' x ' + ${item.productName}">1 x Panel</td>
+                    <td class="numeric" th:text="${item.lineTotalDisplay}">₦0</td>
+                </tr>
+                <tr>
+                    <td><strong>Total</strong></td>
+                    <td class="numeric"><strong th:text="${order.totalDisplay}">₦0</strong></td>
+                </tr>
+                </tbody>
+            </table>
+            <p class="note" th:if="${order.converted}">
+                Charged as <span th:text="${order.chargeDisplay}">€0</span>
+                at <span th:text="${order.exchangeRateDisplay}">₦1,800</span> to €1.
+            </p>
+        </section>
+
+        <section class="panel">
+            <h2>Delivery</h2>
+            <p>
+                <strong th:text="${order.shippingName}">Name</strong><br>
+                <span th:each="line : ${order.shippingLines}">
+                    <span th:text="${line}">line</span><br>
+                </span>
+            </p>
+            <p class="note">
+                <span th:text="${order.user.email}">email</span>
+            </p>
+        </section>
+
+        <section class="panel">
+            <h2>Status</h2>
+            <p>
+                <span class="status-pill"
+                      th:classappend="'status-' + ${order.status.name().toLowerCase()}"
+                      th:text="${order.status.displayName}">Status</span>
+            </p>
+            <dl class="admin-facts">
+                <dt>Placed</dt>
+                <dd th:text="${order.placedAtDisplay}">date</dd>
+                <dt>Paying by</dt>
+                <dd th:text="${order.paymentMethod != null} ? ${order.paymentMethod.displayName} : '—'">Method</dd>
+                <dt th:if="${order.providerReference != null}">Provider reference</dt>
+                <dd th:if="${order.providerReference != null}" th:text="${order.providerReference}">ref</dd>
+            </dl>
+
+            <!--
+              Only the action the current status allows is offered. Showing
+              both and refusing one afterwards is how a dispatch email goes to
+              somebody who has not paid.
+            -->
+            <form th:if="${order.status.name() == 'PAID'}"
+                  th:action="@{/admin/orders/{id}/ship(id=${order.id})}" method="post" class="mt-md">
+                <button type="submit" class="button-primary button-block">Mark as shipped</button>
+                <span class="note">Emails the customer to say it is on its way.</span>
+            </form>
+
+            <form th:if="${order.status.name() == 'PENDING_PAYMENT'}"
+                  th:action="@{/admin/orders/{id}/cancel(id=${order.id})}" method="post" class="mt-md">
+                <button type="submit" class="button-secondary button-block">Cancel and return stock</button>
+                <span class="note">Nothing was charged; the items go back on the shelf.</span>
+            </form>
+
+            <p class="note mt-md" th:if="${order.status.name() == 'SHIPPED'}">
+                Dispatched. There is nothing further to do here — this app has no
+                returns or refunds path yet.
+            </p>
+            <p class="note mt-md" th:if="${order.status.name() == 'CANCELLED'}">
+                Cancelled, and its stock was returned.
+            </p>
+        </section>
+    </div>
+</main>
+
+</body>
+</html>

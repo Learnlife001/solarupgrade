@@ -42,16 +42,13 @@ public class OrderExpiryJob {
 
     private final OrderRepository orderRepository;
     private final OrderService orderService;
-    private final EmailService emailService;
     private final Duration after;
 
     public OrderExpiryJob(OrderRepository orderRepository,
                           OrderService orderService,
-                          EmailService emailService,
                           @Value("${app.order-expiry.after-hours:72}") long afterHours) {
         this.orderRepository = orderRepository;
         this.orderService = orderService;
-        this.emailService = emailService;
         this.after = Duration.ofHours(afterHours);
     }
 
@@ -73,11 +70,12 @@ public class OrderExpiryJob {
 
         log.info("Releasing stock from {} unpaid order(s) older than {}h", stale.size(), after.toHours());
         for (Order order : stale) {
-            // The transition guard inside cancelUnpaid is what makes this safe
-            // against an order that was paid between the query and here.
-            if (orderService.cancelUnpaid(order)) {
-                emailService.sendOrderExpired(order);
-            }
+            // By id, and the service re-reads it: the guard inside cancelUnpaid
+            // then runs against the row as it is now, not as this query saw it,
+            // so an order paid in between is left alone. The notification is
+            // sent from there too, so both routes to a cancellation tell the
+            // customer the same thing.
+            orderService.cancelUnpaid(order.getId());
         }
     }
 }

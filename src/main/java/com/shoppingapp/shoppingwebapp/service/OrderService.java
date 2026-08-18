@@ -122,6 +122,14 @@ public class OrderService {
      * removed panels from the shop permanently. A handful of unpaid orders
      * could take the catalogue to "out of stock" with nothing sold.
      *
+     * <p>Takes an id and loads the order itself. It used to take a loaded Order
+     * and failed with "Entity not managed" whenever the caller had read it in an
+     * earlier transaction — which the admin screens do, and the scheduled job
+     * happens not to. Tests missed it entirely because a @Transactional test
+     * keeps everything in one transaction, so nothing is ever detached. A
+     * method that locks and mutates rows has to load them inside its own
+     * transaction.
+     *
      * <p>Guarded by the transition, like markPaid: an order that is not
      * PENDING_PAYMENT is returned untouched, so a paid order can never have its
      * stock handed back and a second run cannot return the same units twice.
@@ -129,7 +137,8 @@ public class OrderService {
      * @return true when this call is what cancelled it
      */
     @Transactional
-    public boolean cancelUnpaid(Order order) {
+    public boolean cancelUnpaid(Long orderId) {
+        Order order = getAnyOrder(orderId);
         if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
             return false;
         }
@@ -154,8 +163,55 @@ public class OrderService {
         }
 
         order.setStatus(OrderStatus.CANCELLED);
-        orderRepository.save(order);
+        Order saved = orderRepository.save(order);
+        // Told either way -- an order that vanishes without a word is worse
+        // whether a job released it or a person did.
+        emailService.sendOrderExpired(saved);
         return true;
+    }
+
+    /**
+     * Marks a paid order as dispatched and tells the customer.
+     *
+     * <p>Only from PAID. Shipping an order nobody paid for is the mistake this
+     * guard exists to prevent, and it is an easy one to make from a list where
+     * the rows look alike. A second press finds it already shipped and sends
+     * nothing, so a double-click does not email twice.
+     *
+     * @return true when this call is what shipped it
+     */
+    @Transactional
+    public boolean markShipped(Long orderId) {
+        Order order = getAnyOrder(orderId);
+        if (order.getStatus() != OrderStatus.PAID) {
+            return false;
+        }
+        order.setStatus(OrderStatus.SHIPPED);
+        Order saved = orderRepository.save(order);
+        emailService.sendOrderShipped(saved);
+        return true;
+    }
+
+    /** Every order, newest first. Admin only -- see OrderRepository. */
+    public List<Order> allOrders() {
+        return orderRepository.findAllByOrderByPlacedAtDesc();
+    }
+
+    public List<Order> ordersWithStatus(OrderStatus status) {
+        return orderRepository.findByStatusOrderByPlacedAtDesc(status);
+    }
+
+    /**
+     * Any order by id, without the owning-user check {@link #getForUser} makes.
+     * Only reachable from the admin area.
+     */
+    public Order getAnyOrder(Long orderId) {
+        return orderRepository.findWithItemsById(orderId)
+                .orElseThrow(() -> new NoSuchElementException("No order " + orderId));
+    }
+
+    public long countWithStatus(OrderStatus status) {
+        return orderRepository.countByStatus(status);
     }
 
     /**

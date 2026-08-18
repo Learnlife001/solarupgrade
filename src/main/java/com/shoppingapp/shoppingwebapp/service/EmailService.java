@@ -179,6 +179,39 @@ public class EmailService {
     }
 
     /**
+     * Tells a customer their order is on its way.
+     *
+     * <p>The last message in an order's life, and the one people actually wait
+     * for. Sent from {@code OrderService.markShipped} on the transition only,
+     * so pressing the button twice does not send it twice.
+     */
+    public void sendOrderShipped(Order order) {
+        StringBuilder body = new StringBuilder();
+        body.append("Hi ").append(order.getUser().getFullName()).append(",\n\n")
+                .append("Order #").append(order.getId())
+                .append(" has been dispatched and is on its way to you.\n\n")
+                .append("On its way:\n\n");
+        for (OrderItem item : order.getItems()) {
+            body.append("  ").append(item.getQuantity()).append(" x ")
+                    .append(item.getProductName())
+                    .append('\n');
+        }
+        body.append("\nDelivering to:\n")
+                .append("    ").append(order.getShippingName()).append('\n');
+        for (String line : order.getShippingLines()) {
+            body.append("    ").append(line).append('\n');
+        }
+        body.append("\nDelivery is usually 5 to 10 working days nationwide.\n")
+                .append("Your order: ").append(baseUrl).append("/orders/").append(order.getId())
+                .append("\n\nReply to this email if anything is wrong with the delivery details.\n");
+
+        send(order.getUser().getEmail(),
+                "On its way — SolarUpgrade order #" + order.getId(),
+                body.toString(),
+                "dispatch notice for order " + order.getId());
+    }
+
+    /**
      * The one-time link that lets someone back into their account.
      *
      * <p>The token is passed in rather than read off the user, because the user

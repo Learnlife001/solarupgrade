@@ -156,6 +156,59 @@ schema that does not match.
 in the default in-memory configuration and false in every profile that points at
 a real database.
 
+## The admin area
+
+`/admin`, behind `ROLE_ADMIN`. It shows every order across every customer,
+which is why it is the only part of the application with a role check in front
+of it.
+
+| Page | What it does |
+|---|---|
+| `/admin` | Counts by status, and the paid-but-not-yet-shipped list |
+| `/admin/orders` | Every order, filterable by status |
+| `/admin/orders/{id}` | Items, delivery address, payment, and the one action its status allows |
+| `/admin/products` | Stock, lowest first, editable |
+
+**Only the action the status allows is offered.** A paid order can be marked
+shipped; an unpaid one can be cancelled and its stock returned. Neither button
+appears on an order in the wrong state, and the service refuses anyway if one
+is posted — showing both and refusing afterwards is how a dispatch email
+reaches somebody who never paid.
+
+**There is no refund path,** so a paid order cannot be cancelled here. Handing
+the stock back while the money sits in PayPal would leave the books wrong in a
+way nothing in the app could correct.
+
+### Becoming an administrator
+
+`APP_ADMIN_EMAILS`, a comma-separated list. The accounts have to exist first —
+register and verify through the ordinary front door, then name them and
+restart. Removing an address takes the role back on the next start, so that
+variable is the whole truth about who is an administrator.
+
+The alternative was a seeded admin account with a known password, which exists
+on every deployment and whose password lives in this repository, or a checkbox
+on the registration form. Neither is defensible.
+
+### The admin hostname
+
+`APP_ADMIN_HOST` names a hostname whose front page opens on the dashboard
+instead of the shop. Only the root path is redirected; sign-in, the stylesheet
+and the scripts have to keep working on that hostname.
+
+**The hostname is a front door, not a lock.** A `Host:` header is set by the
+client, so anything it granted would be granted to anyone who typed it. Access
+is `ROLE_ADMIN` and only that, on whichever address the request arrives at, and
+a test asserts exactly that.
+
+**Render cannot issue `admin.solarupgrade.onrender.com`.** An `onrender.com`
+address is `<service-name>.onrender.com` and goes no deeper. The two real
+options are a custom domain (`admin.yourdomain.com`, added under Settings →
+Custom Domains and pointed at the service with a CNAME) or a second service
+named `admin-solarupgrade`. The custom domain is better: a second service is a
+second container, a second cold start, and a second copy of the code to keep in
+step with the first.
+
 ## History: this codebase was rebuilt
 
 The original application source was lost. `src/main` had been committed as a
@@ -297,7 +350,8 @@ one provider is failing" is a real thing to need.
   was Render Postgres. Neon's free tier has no IP allowlist; TLS is what
   protects the connection.
 - **Backups are unverified.** An untested restore is a hope, not a backup.
-- No 2FA, no audit log, and the `ADMIN` role still does nothing.
+- No 2FA. The admin area is one password away, on an account that can read
+  every customer's address and order history.
 - **No admin interface at all.** Orders can only be read with SQL, and nothing
   in the app ever sets `SHIPPED`. There is no refund path.
 
@@ -624,9 +678,13 @@ These are deliberate and worth picking up next:
 - **Only PayPal can take money, and only in sandbox.** Card and bank transfer
   wait on OPay; going live needs a PayPal Business account, fresh Live
   credentials and a new Live webhook.
-- **No admin UI.** The `ADMIN` role exists and is assignable, but nothing uses
-  it; products can only be changed through the seeder or directly in the
-  database. Orders cannot be marked shipped, cancelled by hand, or refunded.
+- **No refunds.** A paid order can be shipped but not reversed, so a customer
+  who wants their money back has to be handled outside the application.
+- **The admin area has no audit trail.** Actions are logged with the
+  administrator's address, but nothing is stored, so "who cancelled this?"
+  cannot be answered from the database.
+- **Products can be restocked but not created or edited** from the admin area;
+  the catalogue still comes from migrations.
 - **Stock is held, not reserved indefinitely.** Placing an order decrements
   stock under a row lock, so two shoppers racing for the last unit cannot both
   win — the loser is refused at checkout. An order left unpaid for 72 hours is

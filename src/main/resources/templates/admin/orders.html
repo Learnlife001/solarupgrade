@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/layout :: head('Orders · SolarUpgrade admin')}"></head>
+<body>
+
+<div th:replace="~{admin/layout :: header}"></div>
+
+<main class="container">
+    <h1>Orders</h1>
+    <div th:replace="~{admin/layout :: flash}"></div>
+
+    <nav class="admin-filters">
+        <a th:href="@{/admin/orders}"
+           th:classappend="${selectedStatus == null} ? 'is-current'">All</a>
+        <a th:each="status : ${statuses}"
+           th:href="@{/admin/orders(status=${status})}"
+           th:classappend="${selectedStatus != null and selectedStatus.name() == status.name()} ? 'is-current'"
+           th:text="${status.displayName}">Status</a>
+    </nav>
+
+    <p class="note" th:if="${#lists.isEmpty(orders)}">No orders here.</p>
+
+    <table class="admin-table" th:unless="${#lists.isEmpty(orders)}">
+        <thead>
+        <tr>
+            <th>Order</th>
+            <th>Placed</th>
+            <th>Customer</th>
+            <th>Status</th>
+            <th>Paying by</th>
+            <th class="numeric">Total</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="order : ${orders}">
+            <td>
+                <a th:href="@{/admin/orders/{id}(id=${order.id})}"
+                   th:text="'#' + ${order.id}">#1</a>
+            </td>
+            <td th:text="${order.placedAtShortDisplay}">1 Jan</td>
+            <td th:text="${order.shippingName}">Name</td>
+            <td>
+                <span class="status-pill"
+                      th:classappend="'status-' + ${order.status.name().toLowerCase()}"
+                      th:text="${order.status.displayName}">Status</span>
+            </td>
+            <td th:text="${order.paymentMethod != null} ? ${order.paymentMethod.displayName} : '—'">Method</td>
+            <td class="numeric" th:text="${order.totalDisplay}">₦0</td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+
+</body>
+</html>
