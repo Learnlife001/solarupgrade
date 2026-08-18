@@ -47,4 +47,11 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+
+    // Lets EmailRenderTest write the rendered emails out for looking at:
+    //   ./gradlew test --tests '*EmailRenderTest*' -Demail.dump.dir=/tmp/mail
+    // Email templates are the one thing that cannot be checked by reading them.
+    if (System.getProperty('email.dump.dir')) {
+        systemProperty 'email.dump.dir', System.getProperty('email.dump.dir')
+    }
 }

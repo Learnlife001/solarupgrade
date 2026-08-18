@@ -39,17 +39,22 @@ public class ResendMailer {
      * @throws org.springframework.web.client.RestClientException if Resend
      *         rejects the message; the caller decides whether that is fatal.
      */
-    public void send(String from, String to, String subject, String text) {
+    public void send(String from, String to, String subject, String text, String html) {
         client.post()
                 .uri("/emails")
                 .header("Authorization", "Bearer " + apiKey)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(new Payload(from, List.of(to), subject, text))
+                .body(new Payload(from, List.of(to), subject, text, html))
                 .retrieve()
                 .toBodilessEntity();
     }
 
-    /** Field names match Resend's API; "text" sends a plain-text body. */
-    record Payload(String from, List<String> to, String subject, String text) {
+    /**
+     * Field names match Resend's API. Sending both "text" and "html" makes it
+     * build a multipart/alternative message: clients that render HTML show
+     * that, the rest fall back to the text, and spam filters stop treating the
+     * message as HTML-only.
+     */
+    record Payload(String from, List<String> to, String subject, String text, String html) {
     }
 }

@@ -62,7 +62,8 @@ class ResendMailerTest {
 
     @Test
     void postsToTheEmailsEndpointWithBearerAuth() {
-        mailer().send("SolarUpgrade <orders@example.test>", "buyer@example.test", "Subject", "Body");
+        mailer().send("SolarUpgrade <orders@example.test>", "buyer@example.test", "Subject",
+                "Body", "<p>Body</p>");
 
         assertThat(capturedPath.get()).isEqualTo("/emails");
         assertThat(capturedAuth.get()).isEqualTo("Bearer re_test_key");
@@ -71,7 +72,8 @@ class ResendMailerTest {
 
     @Test
     void sendsTheFieldNamesResendExpects() throws Exception {
-        mailer().send("SolarUpgrade <orders@example.test>", "buyer@example.test", "Your order", "Thanks!");
+        mailer().send("SolarUpgrade <orders@example.test>", "buyer@example.test", "Your order",
+                "Thanks!", "<p>Thanks!</p>");
 
         JsonNode body = new ObjectMapper().readTree(capturedBody.get());
         assertThat(body.get("from").asText()).isEqualTo("SolarUpgrade <orders@example.test>");
@@ -80,13 +82,16 @@ class ResendMailerTest {
         assertThat(body.get("to").get(0).asText()).isEqualTo("buyer@example.test");
         assertThat(body.get("subject").asText()).isEqualTo("Your order");
         assertThat(body.get("text").asText()).isEqualTo("Thanks!");
+        // Both bodies go in one call: Resend builds the multipart/alternative
+        // from them, and a message with only HTML scores worse with filters.
+        assertThat(body.get("html").asText()).isEqualTo("<p>Thanks!</p>");
     }
 
     @Test
     void surfacesAnErrorResponseToTheCaller() {
         responseStatus = 422;
 
-        assertThatThrownBy(() -> mailer().send("from@example.test", "to@example.test", "s", "b"))
+        assertThatThrownBy(() -> mailer().send("from@example.test", "to@example.test", "s", "b", "<p>b</p>"))
                 .isInstanceOf(RestClientResponseException.class);
     }
 }

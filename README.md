@@ -156,6 +156,43 @@ schema that does not match.
 in the default in-memory configuration and false in every profile that points at
 a real database.
 
+## Email
+
+Every message goes out as **HTML and plain text in one multipart message**. The
+text half is not a formality: some clients are set to prefer it, some spam
+filters read a missing text part as a signal, and a watch or screen reader may
+take it instead. `SimpleMailMessage` was replaced by a `MimeMessage` on the SMTP
+path because it can only carry one body, and Resend's payload gained an `html`
+field beside `text`.
+
+**Tables and inline styles.** It looks twenty years out of date and it is simply
+what email is: Outlook renders with Word's engine, Gmail drops much of what is
+in a `<style>` block, and neither supports flexbox or grid.
+
+**Product pictures are PNG, not the site's SVG.** No major email client renders
+SVG — Gmail and Outlook both drop it — so the same drawings are rasterised into
+`static/images/email/` and referenced by absolute URL, the only kind an inbox can
+resolve. Every `<img>` carries `width`, `height` and real alt text, so a client
+with images blocked still lays the row out and reads the product name instead of
+showing a grey box. A product whose row has been deleted renders without a
+picture rather than as a broken one.
+
+**Everything a person typed is escaped.** A shipping address is whatever the
+customer put in the box; unescaped, it would let them write markup into an email
+we send in our own name. There is a test that puts `<script>` in a name and a
+shipping line and asserts neither survives.
+
+Order emails share one set of components, so a receipt and a dispatch notice
+describe the same purchase in the same shape. The dispatch notice deliberately
+leaves prices out — the money is settled by then, and repeating the figures
+invites a second look at a number nobody needs to check.
+
+To see them, dump the rendered HTML and open it in a browser:
+
+```bash
+./gradlew test --tests '*EmailRenderTest*' -Demail.dump.dir=/tmp/mail
+```
+
 ## The admin area
 
 `/admin`, behind `ROLE_ADMIN`. It shows every order across every customer,
