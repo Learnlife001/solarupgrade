@@ -49,8 +49,14 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     static {
         POLICIES.put("/resend-verification", new RateLimiter.Policy(3, Duration.ofHours(1)));
+        // Sends mail to an address the caller names, so it is as abusable as a
+        // resend: without a cap it is a way to post email to someone else.
+        POLICIES.put("/forgot-password", new RateLimiter.Policy(3, Duration.ofHours(1)));
         POLICIES.put("/register", new RateLimiter.Policy(5, Duration.ofHours(1)));
         POLICIES.put("/verify", new RateLimiter.Policy(15, Duration.ofMinutes(15)));
+        // Guessing a reset token is guessing 256 bits, but a cap costs nothing
+        // and keeps a scripted attempt from filling the logs.
+        POLICIES.put("/reset-password", new RateLimiter.Policy(15, Duration.ofMinutes(15)));
         POLICIES.put("/login", new RateLimiter.Policy(10, Duration.ofMinutes(15)));
     }
 

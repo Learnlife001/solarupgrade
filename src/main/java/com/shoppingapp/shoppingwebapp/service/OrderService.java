@@ -9,11 +9,16 @@ import com.shoppingapp.shoppingwebapp.model.Product;
 import com.shoppingapp.shoppingwebapp.model.User;
 import com.shoppingapp.shoppingwebapp.repository.OrderRepository;
 import com.shoppingapp.shoppingwebapp.repository.ProductRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 
 @Service
 @Transactional(readOnly = true)
@@ -24,6 +29,9 @@ public class OrderService {
     private final CartService cartService;
     private final EmailService emailService;
     private final ExchangeRates exchangeRates;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public OrderService(OrderRepository orderRepository,
                         ProductRepository productRepository,
@@ -77,6 +85,8 @@ public class OrderService {
         order.setShippingCountry(form.getShippingCountry());
         order.setPaymentMethod(form.getPaymentMethod());
 
+        lockStock(cartItems);
+
         for (CartItem cartItem : cartItems) {
             Product product = cartItem.getProduct();
             if (product.getStock() < cartItem.getQuantity()) {
@@ -102,6 +112,78 @@ public class OrderService {
         cartService.clear(user);
         emailService.sendOrderConfirmation(saved);
         return saved;
+    }
+
+    /**
+     * Cancels an unpaid order and puts its stock back.
+     *
+     * <p>The counterpart to {@link #placeOrder}, and the reason that method is
+     * allowed to hold stock at all: without a way back, every abandoned basket
+     * removed panels from the shop permanently. A handful of unpaid orders
+     * could take the catalogue to "out of stock" with nothing sold.
+     *
+     * <p>Guarded by the transition, like markPaid: an order that is not
+     * PENDING_PAYMENT is returned untouched, so a paid order can never have its
+     * stock handed back and a second run cannot return the same units twice.
+     *
+     * @return true when this call is what cancelled it
+     */
+    @Transactional
+    public boolean cancelUnpaid(Order order) {
+        if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
+            return false;
+        }
+
+        // Same lock and the same ordering as checkout. Returning stock is a
+        // read-modify-write too, and it races with the buying of it.
+        order.getItems().stream()
+                .map(OrderItem::getProduct)
+                .filter(Objects::nonNull)
+                .sorted(Comparator.comparing(Product::getId))
+                .forEach(product -> entityManager.refresh(product, LockModeType.PESSIMISTIC_WRITE));
+
+        for (OrderItem item : order.getItems()) {
+            Product product = item.getProduct();
+            // Null when the product row was deleted after the order was placed.
+            // The order still shows what was bought, from its own snapshot;
+            // there is simply nowhere to return the stock to.
+            if (product != null) {
+                product.setStock(product.getStock() + item.getQuantity());
+                productRepository.save(product);
+            }
+        }
+
+        order.setStatus(OrderStatus.CANCELLED);
+        orderRepository.save(order);
+        return true;
+    }
+
+    /**
+     * Takes a write lock on every product in the basket and re-reads its stock
+     * from the database.
+     *
+     * <p>Without this, checkout was a read-modify-write with a gap in the
+     * middle. Two customers buying the last panel both read a stock of one,
+     * both passed the check, and both wrote zero: two orders, one panel, and
+     * nothing in the system aware of it. That needs no unusual timing, only two
+     * people in the same second, which is what an advert produces.
+     *
+     * <p>Refresh rather than a plain lock, and deliberately so. Locking an
+     * entity that is already loaded blocks until the other transaction commits
+     * and then leaves the stale value sitting in memory, so the second
+     * transaction would decrement the figure it read before waiting -- the same
+     * oversell with extra steps. Refreshing under the lock re-reads the
+     * committed row.
+     *
+     * <p>Locks are taken in id order. Two baskets holding the same two products
+     * in opposite orders would otherwise be able to deadlock, each holding what
+     * the other needs next.
+     */
+    private void lockStock(List<CartItem> cartItems) {
+        cartItems.stream()
+                .map(CartItem::getProduct)
+                .sorted(Comparator.comparing(Product::getId))
+                .forEach(product -> entityManager.refresh(product, LockModeType.PESSIMISTIC_WRITE));
     }
 
     private static String blankToNull(String value) {

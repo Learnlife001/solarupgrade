@@ -66,6 +66,22 @@ public class User {
     @Column(nullable = false)
     private int verificationAttempts = 0;
 
+    /**
+     * SHA-256 of the reset token, never the token itself.
+     *
+     * <p>Unlike the six-digit verification code, this value is a credential:
+     * whoever holds it can take the account. Storing the hash means a leaked
+     * database dump contains no usable reset links — the same reasoning that
+     * puts passwords through bcrypt, applied to the thing that can replace a
+     * password. A fast hash is enough here where bcrypt is not, because the
+     * input is 256 bits of randomness rather than something a person chose.
+     */
+    @Column(length = 64)
+    private String resetTokenHash;
+
+    @Column
+    private Instant resetTokenExpiresAt;
+
     protected User() {
         // required by JPA
     }
@@ -130,6 +146,44 @@ public class User {
     private void clearVerificationCode() {
         this.verificationCode = null;
         this.verificationCodeExpiresAt = null;
+    }
+
+    public String getResetTokenHash() {
+        return resetTokenHash;
+    }
+
+    public Instant getResetTokenExpiresAt() {
+        return resetTokenExpiresAt;
+    }
+
+    /** Replaces any outstanding reset link, so only the newest one works. */
+    public void issueResetToken(String tokenHash, Instant expiresAt) {
+        this.resetTokenHash = tokenHash;
+        this.resetTokenExpiresAt = expiresAt;
+    }
+
+    public boolean isResetTokenValid(Instant now) {
+        return resetTokenHash != null
+                && resetTokenExpiresAt != null
+                && now.isBefore(resetTokenExpiresAt);
+    }
+
+    /**
+     * Sets the new password and burns the token in one step, so a reset link
+     * cannot be used twice — including by anyone who read it out of a forwarded
+     * email or a shared inbox.
+     *
+     * <p>Also marks the address verified. Following a link we emailed proves
+     * control of the mailbox, which is the entire question verification asks;
+     * leaving the account unverified afterwards would mean the customer resets
+     * their password successfully and still cannot sign in.
+     */
+    public void applyPasswordReset(String encodedPassword) {
+        this.password = encodedPassword;
+        this.resetTokenHash = null;
+        this.resetTokenExpiresAt = null;
+        this.emailVerified = true;
+        clearVerificationCode();
     }
 
     public Long getId() {

@@ -38,19 +38,34 @@ public class CartService {
      * Adding a product already in the basket increases its quantity rather than
      * creating a second line, which is what the unique constraint on
      * (user, product) enforces at the database level.
+     *
+     * <p>The quantity is capped at what is on the shelf. The basket used to
+     * accept any number and let checkout deliver the bad news, which is the
+     * wrong end of the journey to learn that only two of the six panels you
+     * chose exist.
      */
     @Transactional
-    public void add(User user, Product product, int quantity) {
+    public AddOutcome add(User user, Product product, int quantity) {
         if (quantity < 1) {
             throw new IllegalArgumentException("Quantity must be at least 1");
         }
         CartItem item = cartItemRepository.findByUserAndProduct(user, product)
-                .map(existing -> {
-                    existing.setQuantity(existing.getQuantity() + quantity);
-                    return existing;
-                })
-                .orElseGet(() -> new CartItem(user, product, quantity));
+                .orElseGet(() -> new CartItem(user, product, 0));
+
+        int wanted = item.getQuantity() + quantity;
+        int allowed = capToStock(product, wanted);
+        item.setQuantity(allowed);
         cartItemRepository.save(item);
+        return new AddOutcome(allowed, allowed < wanted);
+    }
+
+    /**
+     * What ended up in the basket, and whether that is less than was asked for.
+     * The caller needs the second half to say so — silently adding four when
+     * six were requested is the kind of quiet correction people only notice at
+     * the checkout.
+     */
+    public record AddOutcome(int quantityInBasket, boolean limitedByStock) {
     }
 
     /** A quantity of zero or less removes the line. */
@@ -61,8 +76,20 @@ public class CartService {
             cartItemRepository.delete(item);
             return;
         }
-        item.setQuantity(quantity);
+        item.setQuantity(capToStock(item.getProduct(), quantity));
         cartItemRepository.save(item);
+    }
+
+    /**
+     * The cap is advisory, not a reservation: stock can still run out between
+     * filling a basket and paying, and only {@code OrderService.placeOrder},
+     * holding a lock on the row, decides that for real.
+     */
+    private static int capToStock(Product product, int wanted) {
+        if (product.getStock() < 1) {
+            throw new IllegalArgumentException(product.getName() + " is out of stock");
+        }
+        return Math.min(wanted, product.getStock());
     }
 
     @Transactional

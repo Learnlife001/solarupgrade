@@ -192,8 +192,10 @@ are limited; reading the sign-in page costs nothing.
 | Endpoint | Allowance |
 |---|---|
 | `POST /resend-verification` | 3 per hour (each one sends an email) |
+| `POST /forgot-password` | 3 per hour (each one sends an email) |
 | `POST /register` | 5 per hour |
 | `POST /verify` | 15 per 15 minutes |
+| `POST /reset-password` | 15 per 15 minutes |
 | `POST /login` | 10 per 15 minutes |
 
 **The limiter's own limits, stated rather than hidden.** The counters are in
@@ -261,6 +263,29 @@ thousand breached passwords and swapping it in changes one constant.
 - `POST /resend-verification` five times: `302, 302, 302, 429, 429`
 - `POST /login` until refused, with `Retry-After: 896`
 
+**The H2 console cannot be exposed by losing a variable.** Its access rule and
+its CSRF exemption were unconditional, next to a comment claiming the console
+was "only enabled under the dev profile" — it is enabled by *default*, and only
+the postgres profile turns it off. So one lost `SPRING_PROFILES_ACTIVE` would
+have booted the app on in-memory H2 with an unauthenticated database console on
+the public internet. Both rules are now tied to `spring.h2.console.enabled`, and
+a test asserts the path needs a login when the console is off.
+
+**Password reset exists, and the token is stored hashed.** There was no way back
+into a forgotten account, which mattered more once wrong passwords started
+locking accounts for fifteen minutes. The link carries 256 bits of randomness;
+the database keeps only its SHA-256, so a stolen dump contains no usable reset
+links. It works once, expires in 30 minutes, is retired by requesting another,
+and enforces the same password policy as registration — otherwise the reset form
+is the way round the rules. The form answers identically for an address with an
+account and one without.
+
+**Customer addresses are redacted in logs.** `Redact.email` turns
+`someone@gmail.com` into `s***@gmail.com` before it reaches a log line. Log
+streams are retained, read by anyone with dashboard access, and shipped to
+whatever aggregator gets added later; the domain is kept because "every send to
+one provider is failing" is a real thing to need.
+
 ### Still open
 
 - **The database password was pasted into a chat transcript and should be
@@ -273,6 +298,8 @@ thousand breached passwords and swapping it in changes one constant.
   protects the connection.
 - **Backups are unverified.** An untested restore is a hope, not a backup.
 - No 2FA, no audit log, and the `ADMIN` role still does nothing.
+- **No admin interface at all.** Orders can only be read with SQL, and nothing
+  in the app ever sets `SHIPPED`. There is no refund path.
 
 ## Design notes
 
@@ -578,7 +605,11 @@ src/main/java/com/shoppingapp/shoppingwebapp/
   dto/         validated form backing objects
   model/       Product, User, CartItem, Order, OrderItem and enums
   repository/  Spring Data JPA repositories
+  security/    rate limiting, login lockout, password policy
   service/     ProductService, CartService, OrderService, UserService, EmailService
+               PaymentReminderJob and OrderExpiryJob (scheduled)
+  service/payment/ PayPalClient, PaymentService
+  support/     Redact -- keeps customer addresses out of log lines
 src/main/resources/
   db/migration/ Flyway migrations, one directory per dialect
   templates/    Thymeleaf pages; fragments/layout.html holds the shared header
@@ -590,14 +621,19 @@ src/main/resources/
 
 These are deliberate and worth picking up next:
 
-- **No payment provider.** The method is chosen and recorded, but nothing is
-  charged; see above.
+- **Only PayPal can take money, and only in sandbox.** Card and bank transfer
+  wait on OPay; going live needs a PayPal Business account, fresh Live
+  credentials and a new Live webhook.
 - **No admin UI.** The `ADMIN` role exists and is assignable, but nothing uses
   it; products can only be changed through the seeder or directly in the
-  database.
-- **No stock reservation.** Stock is checked and decremented when the order is
-  placed. Two shoppers racing for the last unit are resolved by whoever commits
-  first; the loser gets an error at checkout rather than at add-to-basket.
+  database. Orders cannot be marked shipped, cancelled by hand, or refunded.
+- **Stock is held, not reserved indefinitely.** Placing an order decrements
+  stock under a row lock, so two shoppers racing for the last unit cannot both
+  win — the loser is refused at checkout. An order left unpaid for 72 hours is
+  cancelled and its stock returned; see `OrderExpiryJob`.
+- **The catalogue is sample data.** Specifications in migration V11 are
+  invented and prices were converted at a round rate. Both need real figures
+  before anything is sold.
 - **Java 21, not 17.** The original build pinned a Java 17 toolchain. Since the
   code is new, this targets the current LTS instead. `settings.gradle` includes
   the foojay resolver so Gradle can provision a JDK when the machine lacks one.

@@ -60,3 +60,40 @@ services:
       # the app cannot infer it from behind Render's proxy.
       - key: APP_BASE_URL
         value: https://solarupgrade.onrender.com
+
+      # --- PayPal (https://developer.paypal.com/dashboard/applications) ------
+      # Declared here even though the values are set in the dashboard. Left
+      # undeclared, they existed only as something typed in by hand: recreate
+      # the service or re-apply this blueprint and they are gone, PayPalClient
+      # never registers, and the shop keeps serving pages with no way to pay
+      # and nothing saying so.
+      #
+      # PAYPAL_ENV must be sandbox or live. Anything else stops the app at
+      # startup on purpose -- guessing would send real customers to the test
+      # PayPal, where no money moves and no order ever settles.
+      - key: PAYPAL_ENV
+        value: sandbox
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_SECRET
+        sync: false
+      # Without the webhook id the app cannot tell a genuine notification from
+      # a forged one, so it ignores all of them and payments settle only on the
+      # customer's return from PayPal.
+      - key: PAYPAL_WEBHOOK_ID
+        sync: false
+
+      # --- Follow-up email --------------------------------------------------
+      # Off by default in the application, which meant the reminder job was
+      # never registered here at all. On, so an unpaid order gets its one nudge
+      # before it lapses.
+      - key: APP_PAYMENT_REMINDERS_ENABLED
+        value: "true"
+      - key: APP_PAYMENT_REMINDERS_AFTER_HOURS
+        value: "24"
+
+      # Unpaid orders hold their stock until this many hours have passed, then
+      # it goes back on the shelf. Longer than the reminder above, so the
+      # customer is chased before the order lapses rather than after.
+      - key: APP_ORDER_EXPIRY_AFTER_HOURS
+        value: "72"

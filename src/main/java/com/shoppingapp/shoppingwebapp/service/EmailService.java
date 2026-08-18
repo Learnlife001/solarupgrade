@@ -3,6 +3,7 @@ package com.shoppingapp.shoppingwebapp.service;
 import com.shoppingapp.shoppingwebapp.model.Order;
 import com.shoppingapp.shoppingwebapp.model.OrderItem;
 import com.shoppingapp.shoppingwebapp.model.User;
+import com.shoppingapp.shoppingwebapp.support.Redact;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -127,6 +128,36 @@ public class EmailService {
     }
 
     /**
+     * Tells a customer their unpaid order has lapsed and the stock has gone
+     * back on the shelf.
+     *
+     * <p>Sent because the alternative is an order that silently disappears.
+     * Someone who meant to pay tomorrow should find out from us, not from an
+     * empty orders page.
+     */
+    public void sendOrderExpired(Order order) {
+        StringBuilder body = new StringBuilder();
+        body.append("Hi ").append(order.getUser().getFullName()).append(",\n\n")
+                .append("Your SolarUpgrade order #").append(order.getId())
+                .append(" was never paid for, so we have released it and put the items back in stock.\n\n")
+                .append("Nothing has been charged. What lapsed:\n\n");
+        for (OrderItem item : order.getItems()) {
+            body.append("  ").append(item.getQuantity()).append(" x ")
+                    .append(item.getProductName())
+                    .append("  ").append(item.getLineTotalDisplay())
+                    .append('\n');
+        }
+        body.append("\nStill want them? They are here:\n")
+                .append("    ").append(baseUrl).append("/products\n\n")
+                .append("Prices and stock may have changed since you ordered.\n");
+
+        send(order.getUser().getEmail(),
+                "Your SolarUpgrade order #" + order.getId() + " has lapsed",
+                body.toString(),
+                "expiry notice for order " + order.getId());
+    }
+
+    /**
      * Sends the link that turns a new registration into a usable account.
      *
      * <p>Best-effort like the rest: a send failure leaves the account
@@ -144,7 +175,26 @@ public class EmailService {
                 + "Nobody can use this code without also knowing your email address.\n";
         // Subject carries the code too, so it is readable from a notification.
         send(user.getEmail(), code + " is your SolarUpgrade confirmation code", body,
-                "verification code for " + user.getEmail());
+                "verification code for " + Redact.email(user.getEmail()));
+    }
+
+    /**
+     * The one-time link that lets someone back into their account.
+     *
+     * <p>The token is passed in rather than read off the user, because the user
+     * only carries its hash. This is the single moment the real token exists
+     * outside the customer's inbox.
+     */
+    public void sendPasswordReset(User user, String token) {
+        String body = "Hi " + user.getFullName() + ",\n\n"
+                + "Someone asked to reset the password on your SolarUpgrade account.\n\n"
+                + "Set a new password here:\n\n"
+                + "    " + baseUrl + "/reset-password?token=" + token + "\n\n"
+                + "The link works once and expires in 30 minutes.\n\n"
+                + "If this was not you, ignore this email. Your password has not changed "
+                + "and nobody can use this link without reading this message.\n";
+        send(user.getEmail(), "Reset your SolarUpgrade password", body,
+                "password reset for " + Redact.email(user.getEmail()));
     }
 
     private void send(String to, String subject, String body, String description) {

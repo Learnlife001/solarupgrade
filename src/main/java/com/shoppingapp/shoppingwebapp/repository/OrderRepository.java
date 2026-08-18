@@ -26,4 +26,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @EntityGraph(attributePaths = {"items", "items.product"})
     List<Order> findByStatusAndPaymentReminderSentAtIsNullAndPlacedAtBefore(
             OrderStatus status, Instant placedBefore);
+
+    /** Unpaid and past the point where its stock should go back on the shelf. */
+    @EntityGraph(attributePaths = {"items", "items.product"})
+    List<Order> findByStatusAndPlacedAtBefore(OrderStatus status, Instant placedBefore);
 }

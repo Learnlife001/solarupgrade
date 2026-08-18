@@ -91,13 +91,36 @@ class OrderServiceTest {
                 .isInstanceOf(IllegalStateException.class);
     }
 
+    /**
+     * The basket caps at what is on the shelf, so this is the case that
+     * remains: stock that disappeared after the basket was filled, because
+     * someone else bought it first.
+     */
     @Test
     void orderingMoreThanIsInStockIsRejected() {
-        cartService.add(user, panel, 11);
+        cartService.add(user, panel, 10);
+        panel.setStock(2);
+        productRepository.save(panel);
 
         assertThatThrownBy(() -> orderService.placeOrder(user, checkoutForm()))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Not enough stock");
+    }
+
+    @Test
+    void theBasketWillNotHoldMoreThanIsInStock() {
+        cartService.add(user, panel, 40);
+
+        // Ten exist, so ten is what the basket takes -- and it says so.
+        assertThat(cartService.itemCountFor(user)).isEqualTo(10);
+    }
+
+    @Test
+    void addingToAnAlreadyFullBasketDoesNotPushItOverStock() {
+        cartService.add(user, panel, 8);
+        cartService.add(user, panel, 8);
+
+        assertThat(cartService.itemCountFor(user)).isEqualTo(10);
     }
 
     @Test

@@ -48,8 +48,8 @@ public class CartController {
                       Principal principal,
                       RedirectAttributes redirectAttributes) {
         User user = currentUser.require(principal);
-        cartService.add(user, productService.getById(productId), quantity);
-        redirectAttributes.addFlashAttribute("message", "Added to your basket");
+        CartService.AddOutcome outcome = cartService.add(user, productService.getById(productId), quantity);
+        redirectAttributes.addFlashAttribute("message", messageFor(outcome));
         return "redirect:/cart";
     }
 
@@ -67,8 +67,19 @@ public class CartController {
                                 @RequestParam(defaultValue = "1") int quantity,
                                 Principal principal) {
         User user = currentUser.require(principal);
-        cartService.add(user, productService.getById(productId), quantity);
-        return new CartSummary(cartService.itemCountFor(user), "Added to your basket");
+        CartService.AddOutcome outcome = cartService.add(user, productService.getById(productId), quantity);
+        return new CartSummary(cartService.itemCountFor(user), messageFor(outcome));
+    }
+
+    /**
+     * Says so when the basket took less than was asked for, rather than
+     * reporting a plain success and letting the customer discover the
+     * shortfall at checkout.
+     */
+    private static String messageFor(CartService.AddOutcome outcome) {
+        return outcome.limitedByStock()
+                ? "Added what we have — only " + outcome.quantityInBasket() + " in stock"
+                : "Added to your basket";
     }
 
     /** What the enhanced add-to-basket needs back: the number to show, and what to say. */

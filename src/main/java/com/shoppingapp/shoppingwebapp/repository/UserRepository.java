@@ -10,4 +10,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
 
     boolean existsByEmail(String email);
+
+    /**
+     * Looked up by the hash, never by the token: the token exists only in the
+     * customer's email, and the column holds what it hashes to.
+     */
+    Optional<User> findByResetTokenHash(String resetTokenHash);
 }

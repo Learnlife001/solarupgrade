@@ -2,6 +2,7 @@ package com.shoppingapp.shoppingwebapp.config;
 
 import com.shoppingapp.shoppingwebapp.repository.UserRepository;
 import com.shoppingapp.shoppingwebapp.security.LoginAttemptService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.DisabledException;
@@ -22,6 +23,20 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    /**
+     * The H2 console is a database client with no login of its own, so both
+     * the rules it needs -- open access and a CSRF exemption -- are added only
+     * when the console is actually switched on.
+     *
+     * <p>They used to be unconditional, next to a comment claiming the console
+     * was "only enabled under the dev profile". It is enabled by
+     * <em>default</em>; the postgres profile turns it off. So the deployment
+     * was one lost environment variable away from booting on an in-memory
+     * database with an unauthenticated console open to the internet. Tying the
+     * rules to the same property makes that impossible rather than unlikely.
+     */
+    private static final String H2_CONSOLE = "/h2-console/**";
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -91,23 +106,29 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http,
-                                          LoginAttemptService loginAttempts) throws Exception {
+                                          LoginAttemptService loginAttempts,
+                                          @Value("${spring.h2.console.enabled:false}") boolean h2Console)
+            throws Exception {
         http
-                .authorizeHttpRequests(auth -> auth
-                        // Browsing the catalogue does not require an account.
-                        .requestMatchers("/", "/products/**", "/register", "/login",
-                                "/verify", "/verify/**", "/resend-verification",
-                                "/css/**", "/js/**", "/images/**",
-                                // Browsers fetch these before any session exists.
-                                "/favicon.svg", "/favicon.ico",
-                                "/h2-console/**").permitAll()
-                        // Server-to-server, so no session ever exists here.
-                        // Authenticity comes from PayPal's own signature check,
-                        // not from being behind a login; see PaymentController.
-                        .requestMatchers("/payments/*/webhook").permitAll()
-                        // Only health and info are exposed; see application.properties.
-                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
-                        .anyRequest().authenticated())
+                .authorizeHttpRequests(auth -> {
+                    // Browsing the catalogue does not require an account.
+                    auth.requestMatchers("/", "/products/**", "/register", "/login",
+                                    "/verify", "/verify/**", "/resend-verification",
+                                    "/forgot-password", "/reset-password",
+                                    "/css/**", "/js/**", "/images/**",
+                                    // Browsers fetch these before any session exists.
+                                    "/favicon.svg", "/favicon.ico").permitAll()
+                            // Server-to-server, so no session ever exists here.
+                            // Authenticity comes from PayPal's own signature check,
+                            // not from being behind a login; see PaymentController.
+                            .requestMatchers("/payments/*/webhook").permitAll()
+                            // Only health and info are exposed; see application.properties.
+                            .requestMatchers("/actuator/health", "/actuator/info").permitAll();
+                    if (h2Console) {
+                        auth.requestMatchers(H2_CONSOLE).permitAll();
+                    }
+                    auth.anyRequest().authenticated();
+                })
                 .formLogin(form -> form
                         .loginPage("/login")
                         .successHandler(authenticationSuccessHandler(loginAttempts))
@@ -116,14 +137,17 @@ public class SecurityConfig {
                 .logout(logout -> logout
                         .logoutSuccessUrl("/products")
                         .permitAll())
-                // The H2 console renders in a frame and posts without a CSRF token.
-                // Both exemptions are scoped to its path and it is only enabled
-                // under the dev profile.
                 // Webhooks are exempt because the caller is a payment
                 // provider, which has no CSRF token and no session to forge;
                 // the signature check is what stands in for both. Scoped to
-                // the webhook paths only.
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/h2-console/**", "/payments/*/webhook"))
+                // the webhook paths only. The console's exemption is added
+                // beside its access rule, or not at all.
+                .csrf(csrf -> {
+                    csrf.ignoringRequestMatchers("/payments/*/webhook");
+                    if (h2Console) {
+                        csrf.ignoringRequestMatchers(H2_CONSOLE);
+                    }
+                })
                 .headers(headers -> headers
                         .frameOptions(frame -> frame.sameOrigin())
                         // Only emitted on requests the container considers
