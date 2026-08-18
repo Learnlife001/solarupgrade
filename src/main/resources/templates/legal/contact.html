@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Contact · SolarUpgrade')}"></head>
+<body>
+
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container narrow legal">
+    <h1>Contact us</h1>
+    <div th:replace="~{legal/fragments :: draftNotice}"></div>
+
+    <section class="panel">
+        <h2>Email</h2>
+        <p>
+            <a th:href="'mailto:' + ${business.supportEmailOrPlaceholder}"
+               th:text="${business.supportEmailOrPlaceholder}">[support email address]</a>
+        </p>
+        <p class="note">
+            The quickest route for anything about an order. Quote your order
+            number and we can answer without asking you for it.
+        </p>
+
+        <h2 class="mt-md">Telephone</h2>
+        <p th:text="${business.phoneOrPlaceholder}">[telephone number]</p>
+
+        <h2 class="mt-md">Registered address</h2>
+        <p>
+            <strong th:text="${business.legalNameOrPlaceholder}">[registered company name]</strong><br>
+            <span th:text="${business.addressOrPlaceholder}">[registered address]</span><br>
+            RC <span th:text="${business.registrationNumberOrPlaceholder}">[RC number]</span>
+        </p>
+    </section>
+
+    <section class="mt-lg">
+        <h2>Before you write</h2>
+        <p class="note">
+            Some things are faster to check yourself:
+        </p>
+        <ul>
+            <li><a th:href="@{/orders}">Your orders</a> shows the status of everything you
+                have bought, including whether it has shipped.</li>
+            <li>An order waiting for payment can be paid from that same page.</li>
+            <li>Forgotten your password? <a th:href="@{/forgot-password}">Reset it here</a>.</li>
+            <li>Returns and faults are covered on the <a th:href="@{/returns}">returns page</a>.</li>
+        </ul>
+    </section>
+
+    <div th:replace="~{legal/fragments :: lastReviewed}"></div>
+</main>
+
+<div th:replace="~{fragments/layout :: footer}"></div>
+
+</body>
+</html>

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Terms of sale · SolarUpgrade')}"></head>
+<body>
+
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container narrow legal">
+    <h1>Terms of sale</h1>
+    <div th:replace="~{legal/fragments :: draftNotice}"></div>
+
+    <p class="note">
+        These terms apply to everything sold through this site. Placing an order
+        means accepting them.
+    </p>
+
+    <h2>Who you are buying from</h2>
+    <p>
+        SolarUpgrade is operated by
+        <strong th:text="${business.legalNameOrPlaceholder}">[registered company name]</strong>,
+        registered in Nigeria under RC
+        <span th:text="${business.registrationNumberOrPlaceholder}">[RC number]</span>,
+        at <span th:text="${business.addressOrPlaceholder}">[registered address]</span>.
+        You can reach us on
+        <span th:text="${business.phoneOrPlaceholder}">[telephone number]</span>
+        or at
+        <a th:href="'mailto:' + ${business.supportEmailOrPlaceholder}"
+           th:text="${business.supportEmailOrPlaceholder}">[support email address]</a>.
+    </p>
+
+    <h2>Prices and currency</h2>
+    <p>
+        Prices are shown in Nigerian naira and include delivery within Nigeria.
+        Where you pay by a method that cannot take naira, the checkout shows the
+        exact amount in the currency you will be charged, together with the rate
+        used. <strong>That converted figure is fixed when you place the order</strong>
+        and does not change afterwards, whatever the rate does.
+    </p>
+    <p>
+        We try to keep prices accurate. If a price is obviously wrong &mdash; a
+        seven-figure battery listed at a few thousand naira &mdash; we will
+        contact you before dispatching rather than either honouring an error or
+        quietly cancelling.
+    </p>
+
+    <h2>Placing an order</h2>
+    <p>
+        Your order is a request to buy. It becomes a contract when we confirm
+        payment, not when you place it. We hold the items for you in the
+        meantime, and if an order is not paid for within
+        <span th:text="${business.returnsWindowDays >= 3 ? '72 hours' : '72 hours'}">72 hours</span>
+        we release the stock and email you to say so. Nothing is charged for an
+        order that lapses.
+    </p>
+
+    <h2>Payment</h2>
+    <p>
+        Payment is taken by our payment providers on their own pages. We never
+        see or store your card number, bank details or PayPal password &mdash;
+        the site has nowhere to put them. An order is only marked paid when the
+        provider confirms to us that money moved.
+    </p>
+
+    <h2>Delivery</h2>
+    <p>
+        We deliver nationwide, usually within
+        <span th:text="${business.deliveryEstimate}">5 to 10 working days</span>
+        of payment clearing. We will email you when your order is dispatched.
+        Delivery times are estimates and not guarantees; if something is going
+        to be substantially late we will tell you rather than let the date pass
+        in silence.
+    </p>
+    <p>
+        Please check the dimensions and weight of what you order against your
+        roof or plant room before buying. Installation is not included unless
+        stated on the product.
+    </p>
+
+    <h2>Warranty and faults</h2>
+    <p>
+        Products carry the manufacturer's warranty stated in their
+        specification. Separately, and regardless of that warranty, goods must
+        match their description and be fit for purpose &mdash; if they are not,
+        the Federal Competition and Consumer Protection Act 2018 gives you
+        rights that nothing on this page limits.
+    </p>
+    <p>
+        Tell us about a fault at
+        <a th:href="'mailto:' + ${business.supportEmailOrPlaceholder}"
+           th:text="${business.supportEmailOrPlaceholder}">[support email address]</a>
+        and we will arrange repair, replacement or refund.
+    </p>
+
+    <h2>Changing your mind</h2>
+    <p>
+        See the <a th:href="@{/returns}">returns policy</a>.
+    </p>
+
+    <h2>These terms</h2>
+    <p>
+        We may change these terms, but the version that applies to your order is
+        the one published when you placed it. These terms are governed by
+        Nigerian law.
+    </p>
+
+    <div th:replace="~{legal/fragments :: lastReviewed}"></div>
+</main>
+
+<div th:replace="~{fragments/layout :: footer}"></div>
+
+</body>
+</html>

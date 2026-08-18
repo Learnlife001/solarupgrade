@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Privacy · SolarUpgrade')}"></head>
+<body>
+
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container narrow legal">
+    <h1>Privacy</h1>
+    <div th:replace="~{legal/fragments :: draftNotice}"></div>
+
+    <p class="note">
+        What we hold about you, why, and how to make us stop. Written under the
+        Nigeria Data Protection Act 2023.
+    </p>
+
+    <h2>Who holds your data</h2>
+    <p>
+        <strong th:text="${business.legalNameOrPlaceholder}">[registered company name]</strong>
+        (RC <span th:text="${business.registrationNumberOrPlaceholder}">[RC number]</span>),
+        <span th:text="${business.addressOrPlaceholder}">[registered address]</span>,
+        is the data controller. Questions and requests go to
+        <a th:href="'mailto:' + ${business.supportEmailOrPlaceholder}"
+           th:text="${business.supportEmailOrPlaceholder}">[support email address]</a>.
+    </p>
+
+    <h2>What we hold, and why</h2>
+    <table class="legal-table">
+        <thead>
+        <tr><th>What</th><th>Why</th></tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td>Your name and email address</td>
+            <td>To create your account, confirm it is yours, and email you about your orders</td>
+        </tr>
+        <tr>
+            <td>Your password</td>
+            <td>To let you sign in. Stored only as a bcrypt hash &mdash; we cannot read it,
+                and neither can anyone who steals the database</td>
+        </tr>
+        <tr>
+            <td>Your delivery address</td>
+            <td>To deliver what you bought</td>
+        </tr>
+        <tr>
+            <td>Your orders and what they cost</td>
+            <td>To fulfil them, to answer questions about them later, and because
+                sales records must be kept</td>
+        </tr>
+        <tr>
+            <td>A payment reference from the provider</td>
+            <td>To match a payment to an order. <strong>We never hold your card number,
+                bank details or PayPal password</strong> &mdash; the database has nowhere
+                to put them</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <h2>Who else sees it</h2>
+    <p>
+        Only the companies that make the shop work, and only the part each needs:
+    </p>
+    <ul>
+        <li><strong>Our payment providers</strong> &mdash; the amount and order reference,
+            so they can take payment. Your card details go to them directly and never
+            through us.</li>
+        <li><strong>Our email provider</strong> &mdash; your email address and the message,
+            so it can be delivered.</li>
+        <li><strong>Our hosting and database providers</strong> &mdash; they store the data
+            on our behalf and do not use it for anything else.</li>
+        <li><strong>A courier</strong> &mdash; your name, address and phone number, to
+            deliver your order.</li>
+    </ul>
+    <p>
+        We do not sell your data, and we do not share it for anyone else's
+        advertising.
+    </p>
+
+    <h2>Where it is held</h2>
+    <p>
+        Our database and servers are hosted outside Nigeria, in the European
+        Union. Data moved abroad is protected in transit and at rest by the
+        providers we use.
+    </p>
+
+    <h2>How long we keep it</h2>
+    <p>
+        Order records are kept while they may be needed for warranty, tax and
+        accounting purposes. Ask us to close your account and we will delete
+        what we are not required to keep, and tell you what remains and why.
+    </p>
+
+    <h2>Your rights</h2>
+    <p>
+        Under the Nigeria Data Protection Act 2023 you can ask us for a copy of
+        what we hold about you, ask us to correct it, ask us to delete it, or
+        object to how we use it. Email
+        <a th:href="'mailto:' + ${business.supportEmailOrPlaceholder}"
+           th:text="${business.supportEmailOrPlaceholder}">[support email address]</a>
+        and we will respond within 30 days. If you are not satisfied, you can
+        complain to the Nigeria Data Protection Commission.
+    </p>
+
+    <h2>Cookies</h2>
+    <p>
+        One cookie, and it is the one that keeps you signed in. There is no
+        analytics, no advertising and no tracking on this site, so there is
+        nothing here to consent to or opt out of.
+    </p>
+
+    <div th:replace="~{legal/fragments :: lastReviewed}"></div>
+</main>
+
+<div th:replace="~{fragments/layout :: footer}"></div>
+
+</body>
+</html>

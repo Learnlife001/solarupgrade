@@ -1,7 +1,9 @@
 package com.shoppingapp.shoppingwebapp.controller;
 
+import com.shoppingapp.shoppingwebapp.model.AdminActionType;
 import com.shoppingapp.shoppingwebapp.model.Order;
 import com.shoppingapp.shoppingwebapp.model.OrderStatus;
+import com.shoppingapp.shoppingwebapp.service.AuditService;
 import com.shoppingapp.shoppingwebapp.service.OrderService;
 import com.shoppingapp.shoppingwebapp.service.ProductService;
 import org.slf4j.Logger;
@@ -42,10 +44,14 @@ public class AdminController {
 
     private final OrderService orderService;
     private final ProductService productService;
+    private final AuditService auditService;
 
-    public AdminController(OrderService orderService, ProductService productService) {
+    public AdminController(OrderService orderService,
+                           ProductService productService,
+                           AuditService auditService) {
         this.orderService = orderService;
         this.productService = productService;
+        this.auditService = auditService;
     }
 
     @GetMapping
@@ -60,6 +66,7 @@ public class AdminController {
         // Paid but not yet shipped is the actual to-do list: someone has paid
         // and is waiting. It leads the page for that reason.
         model.addAttribute("toShip", orderService.ordersWithStatus(OrderStatus.PAID));
+        model.addAttribute("recentActions", auditService.recent(10));
         return "admin/dashboard";
     }
 
@@ -77,6 +84,7 @@ public class AdminController {
     @GetMapping("/orders/{id}")
     public String order(@PathVariable Long id, Model model) {
         model.addAttribute("order", orderService.getAnyOrder(id));
+        model.addAttribute("history", auditService.forOrder(id));
         return "admin/order";
     }
 
@@ -85,6 +93,8 @@ public class AdminController {
         Order order = orderService.getAnyOrder(id);
         if (orderService.markShipped(id)) {
             log.info("Order {} marked shipped by {}", id, principal.getName());
+            auditService.record(principal.getName(), AdminActionType.ORDER_SHIPPED,
+                    AuditService.ORDER, id, "Customer emailed a dispatch notice");
             flash.addFlashAttribute("message", "Order #" + id + " marked as shipped. The customer has been emailed.");
         } else {
             // Refused rather than forced: the guard is in the service, and the
@@ -101,6 +111,9 @@ public class AdminController {
         Order order = orderService.getAnyOrder(id);
         if (orderService.cancelUnpaid(id)) {
             log.info("Order {} cancelled by {}", id, principal.getName());
+            auditService.record(principal.getName(), AdminActionType.ORDER_CANCELLED,
+                    AuditService.ORDER, id,
+                    order.getItemCount() + " item(s) returned to stock; customer notified");
             flash.addFlashAttribute("message",
                     "Order #" + id + " cancelled and its stock returned to the shelf.");
         } else {
@@ -125,8 +138,12 @@ public class AdminController {
                            Principal principal,
                            RedirectAttributes flash) {
         try {
+            int before = productService.getById(id).getStock();
             var product = productService.setStock(id, stock);
             log.info("Stock for product {} set to {} by {}", id, stock, principal.getName());
+            auditService.record(principal.getName(), AdminActionType.STOCK_SET,
+                    AuditService.PRODUCT, id,
+                    product.getName() + ": " + before + " to " + stock);
             flash.addFlashAttribute("message",
                     product.getName() + " set to " + stock + " in stock.");
         } catch (IllegalArgumentException ex) {

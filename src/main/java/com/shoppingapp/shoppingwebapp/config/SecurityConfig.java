@@ -115,6 +115,10 @@ public class SecurityConfig {
                     auth.requestMatchers("/", "/products/**", "/register", "/login",
                                     "/verify", "/verify/**", "/resend-verification",
                                     "/forgot-password", "/reset-password",
+                                    // A returns policy behind a login is not a
+                                    // policy: people read these before they
+                                    // have an account.
+                                    "/terms", "/returns", "/privacy", "/contact",
                                     "/css/**", "/js/**", "/images/**",
                                     // Browsers fetch these before any session exists.
                                     "/favicon.svg", "/favicon.ico").permitAll()

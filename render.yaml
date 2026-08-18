@@ -121,3 +121,25 @@ services:
       # second copy to keep in step.
       - key: APP_ADMIN_HOST
         sync: false
+
+      # --- Business details -------------------------------------------------
+      # What the terms, returns, privacy and contact pages are built from.
+      # Until every one of these is set, each legal page carries a visible
+      # "draft — not yet in force" notice: an incomplete policy must not be
+      # able to pass for a finished one.
+      - key: APP_BUSINESS_LEGAL_NAME
+        sync: false
+      - key: APP_BUSINESS_RC_NUMBER
+        sync: false
+      - key: APP_BUSINESS_ADDRESS
+        sync: false
+      - key: APP_BUSINESS_PHONE
+        sync: false
+      - key: APP_BUSINESS_SUPPORT_EMAIL
+        sync: false
+      # Days a customer has to change their mind, and the delivery estimate
+      # quoted on the site. Defaults are true of how the shop already works.
+      - key: APP_BUSINESS_RETURNS_WINDOW_DAYS
+        value: "7"
+      - key: APP_BUSINESS_DELIVERY_ESTIMATE
+        value: "5 to 10 working days"

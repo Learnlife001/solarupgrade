@@ -193,6 +193,42 @@ To see them, dump the rendered HTML and open it in a browser:
 ./gradlew test --tests '*EmailRenderTest*' -Demail.dump.dir=/tmp/mail
 ```
 
+## Terms, returns, privacy and contact
+
+Four public pages at `/terms`, `/returns`, `/privacy` and `/contact`, linked
+from the footer of every page. Public deliberately: a customer decides whether
+to trust a shop before they have an account, and a returns policy behind a
+login is not a policy.
+
+**The business details are configuration, not template text.** They belong to
+the business rather than the code — a change of address should not be a change
+of markup — so they come from `app.business.*` and one edit changes every page.
+
+**Until they are supplied, each page carries a visible "Draft — not yet in
+force" notice.** Legal pages built around invented details would be worse than
+none: a customer relies on a returns address to exercise a right, and one that
+does not exist takes the right with it.
+
+| Setting | What it is |
+|---|---|
+| `APP_BUSINESS_LEGAL_NAME` | Registered company name |
+| `APP_BUSINESS_RC_NUMBER` | CAC registration number |
+| `APP_BUSINESS_ADDRESS` | Registered address |
+| `APP_BUSINESS_PHONE` | Telephone number |
+| `APP_BUSINESS_SUPPORT_EMAIL` | Where customers write |
+| `APP_BUSINESS_RETURNS_WINDOW_DAYS` | Days to change your mind (default 7) |
+| `APP_BUSINESS_DELIVERY_ESTIMATE` | As quoted on the site |
+
+The returns page separates changing your mind from something being wrong,
+because they work differently and conflating them is how a shop ends up
+charging return postage on a faulty battery. The privacy page is written
+against the Nigeria Data Protection Act 2023 and states plainly that no card
+number, bank detail or PayPal password is held — which is true, because the
+schema has nowhere to put one.
+
+**These pages have not been reviewed by a lawyer,** and every one of them says
+so. They are a solid starting point, not advice.
+
 ## The admin area
 
 `/admin`, behind `ROLE_ADMIN`. It shows every order across every customer,
@@ -215,6 +251,24 @@ reaches somebody who never paid.
 **There is no refund path,** so a paid order cannot be cancelled here. Handing
 the stock back while the money sits in PayPal would leave the books wrong in a
 way nothing in the app could correct.
+
+### What was done, and by whom
+
+Every shipment, cancellation and stock change is written to `admin_actions`
+with the administrator's address, what was affected and when. It shows as
+recent activity on the dashboard and as a history on the order itself.
+
+It exists because these were only ever written to the application log, and
+Render's logs expire — so "who cancelled this order?" stopped being answerable
+within days, which is exactly the question asked when a customer disputes
+something months later.
+
+The table is append-only by intent: nothing in the application updates or
+deletes a row, and the repository has no method that would let it. Rows keep
+their own copy of the actor and target rather than pointing at the user and
+order rows, so deleting either cannot quietly empty the history. A refused
+action records nothing — an audit row for something that did not happen is
+worse than none, because it states something untrue with confidence.
 
 ### Becoming an administrator
 
@@ -717,9 +771,9 @@ These are deliberate and worth picking up next:
   credentials and a new Live webhook.
 - **No refunds.** A paid order can be shipped but not reversed, so a customer
   who wants their money back has to be handled outside the application.
-- **The admin area has no audit trail.** Actions are logged with the
-  administrator's address, but nothing is stored, so "who cancelled this?"
-  cannot be answered from the database.
+- **Legal pages need a lawyer's eye** before they are relied on, and the
+  business details behind them must be supplied or every page stays marked as
+  a draft.
 - **Products can be restocked but not created or edited** from the admin area;
   the catalogue still comes from migrations.
 - **Stock is held, not reserved indefinitely.** Placing an order decrements

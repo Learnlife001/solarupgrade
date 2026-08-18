@@ -1061,3 +1061,69 @@ input[type="number"].qty-input { width: 4.6rem; margin-top: 0; }
 .stock-form { display: flex; gap: .4rem; align-items: center; }
 
 .button-small { padding: .3rem .7rem; font-size: .82rem; }
+
+/* --- Legal pages ------------------------------------------------------------ */
+
+/* .narrow is 430px, which is right for a sign-in form and far too tight for a
+   page of prose. Around 68 characters a line is where long text stays
+   readable. */
+.container.narrow.legal { max-width: 680px; }
+
+.legal h2 {
+    margin-top: 2rem;
+    font-size: 1.15rem;
+}
+
+.legal p, .legal li { color: var(--ink-2); }
+.legal ul { padding-left: 1.2rem; }
+.legal li { margin-bottom: .4rem; }
+.legal strong { color: var(--ink); }
+
+/* Loud on purpose: an unfinished policy must not pass for a finished one. */
+.draft-notice {
+    background: var(--warn-soft);
+    border: 1px solid var(--warn);
+    border-radius: var(--r-md);
+    padding: .9rem 1.1rem;
+    margin: 0 0 1.5rem;
+    color: var(--warn);
+    font-size: .92rem;
+    line-height: 1.6;
+}
+
+.legal-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .92rem;
+    display: block;
+    overflow-x: auto;
+}
+
+.legal-table th {
+    text-align: left;
+    padding: .5rem .6rem;
+    border-bottom: 1px solid var(--line-strong);
+    color: var(--ink-2);
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+}
+
+.legal-table td {
+    padding: .6rem;
+    border-bottom: 1px solid var(--line);
+    color: var(--ink-2);
+    vertical-align: top;
+}
+
+.footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1.1rem;
+    margin-bottom: .75rem;
+    font-size: .88rem;
+}
+
+.footer-links a { color: var(--ink-2); text-decoration: none; }
+.footer-links a:hover { color: var(--ink); text-decoration: underline; }

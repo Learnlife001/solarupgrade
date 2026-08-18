@@ -60,6 +60,16 @@
 </header>
 
 <footer th:fragment="footer" class="site-footer">
+    <!--
+      In the footer of every page because that is where people look for them,
+      and because a returns policy nobody can find is not a policy.
+    -->
+    <nav class="footer-links">
+        <a th:href="@{/terms}">Terms of sale</a>
+        <a th:href="@{/returns}">Returns</a>
+        <a th:href="@{/privacy}">Privacy</a>
+        <a th:href="@{/contact}">Contact</a>
+    </nav>
     <p>SolarUpgrade &mdash; demo storefront. Prices and stock are sample data.</p>
 </footer>
 

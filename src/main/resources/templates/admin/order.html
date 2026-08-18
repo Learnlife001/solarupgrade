@@ -87,6 +87,32 @@
             </p>
         </section>
     </div>
+
+    <!--
+      This order's own history. Kept beside the order rather than only on the
+      dashboard, because the question is asked while looking at the order.
+    -->
+    <section class="mt-lg" th:if="${!#lists.isEmpty(history)}">
+        <h2>History</h2>
+        <table class="admin-table">
+            <thead>
+            <tr>
+                <th>When</th>
+                <th>Who</th>
+                <th>What</th>
+                <th>Detail</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="entry : ${history}">
+                <td th:text="${entry.happenedAtDisplay}">date</td>
+                <td th:text="${entry.actor}">who</td>
+                <td th:text="${entry.action.displayName}">action</td>
+                <td th:text="${entry.detail}">detail</td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
 </main>
 
 </body>

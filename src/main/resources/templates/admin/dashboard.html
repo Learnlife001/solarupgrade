@@ -73,6 +73,45 @@
             </tbody>
         </table>
     </section>
+
+    <!--
+      What was done, and by whom. On the dashboard because the first question
+      after "what is waiting?" is usually "what did somebody already do?".
+    -->
+    <section class="mt-lg">
+        <div class="section-head">
+            <h2>Recent activity</h2>
+            <p>The last ten administrator actions.</p>
+        </div>
+
+        <p class="note" th:if="${#lists.isEmpty(recentActions)}">
+            Nothing recorded yet. Shipping, cancelling and stock changes appear here.
+        </p>
+
+        <table class="admin-table" th:unless="${#lists.isEmpty(recentActions)}">
+            <thead>
+            <tr>
+                <th>When</th>
+                <th>Who</th>
+                <th>What</th>
+                <th>Detail</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="entry : ${recentActions}">
+                <td th:text="${entry.happenedAtDisplay}">date</td>
+                <td th:text="${entry.actor}">who</td>
+                <td>
+                    <span th:text="${entry.action.displayName}">action</span>
+                    <a th:if="${entry.targetType == 'order'}"
+                       th:href="@{/admin/orders/{id}(id=${entry.targetId})}"
+                       th:text="'#' + ${entry.targetId}">#1</a>
+                </td>
+                <td th:text="${entry.detail}">detail</td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
 </main>
 
 </body>
