@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('German suppliers')}"></head>
+<body>
+
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container">
+    <div class="section-head">
+        <h1>Importing directly from Germany</h1>
+        <p>
+            Who actually exports to Nigeria, and what it involves.
+        </p>
+    </div>
+
+    <!--
+      The honest framing. A customer who works out for themselves that direct
+      import is more trouble than it is worth has chosen the shop on their own
+      terms, which is a better sale than one made by pretending the option does
+      not exist.
+    -->
+    <section class="import-reality">
+        <h2>What direct import actually involves</h2>
+        <div class="import-grid">
+            <div>
+                <h3>Minimum orders</h3>
+                <p>
+                    Most German wholesalers sell by the pallet, not the panel.
+                    A pallet is roughly 30 panels; a container is far more.
+                </p>
+            </div>
+            <div>
+                <h3>Freight</h3>
+                <p>
+                    Sea freight to Lagos takes four to eight weeks. Air freight is
+                    faster and rarely worth it on something as heavy as glass.
+                </p>
+            </div>
+            <div>
+                <h3>Duty and clearing</h3>
+                <p>
+                    Import duty, VAT and a clearing agent at the port. These are
+                    real costs and they land after you have already paid the supplier.
+                </p>
+            </div>
+            <div>
+                <h3>Paying in euro</h3>
+                <p>
+                    German suppliers invoice in euro. You carry the exchange rate
+                    and the transfer fees, usually before anything ships.
+                </p>
+            </div>
+            <div>
+                <h3>Warranty across borders</h3>
+                <p>
+                    A panel that fails in year three has to go back to Germany, or
+                    be argued about by email. Ask before you buy, not after.
+                </p>
+            </div>
+            <div>
+                <h3>English is not a given</h3>
+                <p>
+                    Plenty of these companies work in German only. Where we know
+                    an English email gets answered, the entry says so.
+                </p>
+            </div>
+        </div>
+        <p class="note">
+            None of that makes direct import a bad idea &mdash; for a large order it
+            can be much cheaper. It makes it a project. If you would rather someone
+            else did it, that is what <a th:href="@{/products}">our catalogue</a> is
+            for: naira prices, delivery included, no customs to clear.
+        </p>
+    </section>
+
+    <form th:action="@{/suppliers}" method="get" class="supplier-filters">
+        <label>
+            Search
+            <input type="search" name="q" th:value="${term}" placeholder="Company, city or region">
+        </label>
+        <label>
+            Stocks
+            <select name="category">
+                <option value="">Anything</option>
+                <option th:each="c : ${categories}" th:value="${c}"
+                        th:text="${c.displayName}"
+                        th:selected="${selectedCategory != null and selectedCategory.name() == c.name()}">Category</option>
+            </select>
+        </label>
+        <label>
+            Sells
+            <select name="trade">
+                <option value="">Either way</option>
+                <option th:each="t : ${trades}" th:value="${t}"
+                        th:text="${t.displayName}"
+                        th:selected="${selectedTrade != null and selectedTrade.name() == t.name()}">Trade</option>
+            </select>
+        </label>
+        <label>
+            Exports
+            <select name="stance">
+                <option value="">Any answer</option>
+                <option th:each="s : ${stances}" th:value="${s}"
+                        th:text="${s.displayName}"
+                        th:selected="${selectedStance != null and selectedStance.name() == s.name()}">Stance</option>
+            </select>
+        </label>
+        <button type="submit" class="button-secondary">Filter</button>
+        <a th:href="@{/suppliers}" class="note" th:if="${filtered}">Clear</a>
+    </form>
+
+    <!--
+      Two different empty states. "Nothing matches your filter" and "we have not
+      researched this yet" are not the same message, and showing the first when
+      the second is true makes the site look broken rather than honest.
+    -->
+    <p class="note" th:if="${#lists.isEmpty(suppliers)} and ${filtered}">
+        Nothing matches that. <a th:href="@{/suppliers}">Show everything</a>.
+    </p>
+
+    <section class="panel" th:if="${#lists.isEmpty(suppliers)} and ${!filtered}">
+        <h2>Nothing listed yet</h2>
+        <p class="note">
+            We are still contacting German suppliers to ask, one at a time, whether
+            they export to Nigeria and on what terms. Entries appear here only once
+            somebody has actually asked and had an answer &mdash; a list copied from
+            a search engine would tell you nothing you could act on.
+        </p>
+    </section>
+
+    <ul class="supplier-list" th:unless="${#lists.isEmpty(suppliers)}">
+        <li th:each="s : ${suppliers}" class="supplier-card">
+            <div class="supplier-head">
+                <h2>
+                    <a th:href="@{/suppliers/{id}(id=${s.id})}" th:text="${s.name}">Company</a>
+                </h2>
+                <span class="export-pill"
+                      th:classappend="'export-' + ${s.exportStance.name().toLowerCase()}"
+                      th:text="${s.exportStance.displayName}">Exports</span>
+            </div>
+
+            <p class="supplier-where">
+                <span th:text="${s.city}">City</span><span th:if="${s.region != null}"
+                    th:text="', ' + ${s.region}">, region</span>
+            </p>
+
+            <p class="supplier-tags">
+                <span class="tag" th:text="${s.trade.displayName}">Trade</span>
+                <span class="tag" th:each="c : ${s.categories}" th:text="${c.displayName}">Category</span>
+            </p>
+
+            <!--
+              The verification date sits on the card, not buried in the detail
+              page. It is the difference between this and a scraped list.
+            -->
+            <p class="supplier-checked">
+                <span th:if="${s.verified}">
+                    Checked <span th:text="${s.verifiedAtDisplay}">date</span>
+                    <span class="tag stale" th:if="${s.stale}">may be out of date</span>
+                </span>
+                <span class="tag unchecked" th:unless="${s.verified}">Not yet checked</span>
+            </p>
+        </li>
+    </ul>
+
+    <p class="note mt-lg">
+        We are not affiliated with any company listed here and earn nothing from
+        listing them. Terms change without telling us &mdash; confirm anything that
+        matters with the supplier before you send money.
+    </p>
+</main>
+
+<div th:replace="~{fragments/layout :: footer}"></div>
+
+</body>
+</html>

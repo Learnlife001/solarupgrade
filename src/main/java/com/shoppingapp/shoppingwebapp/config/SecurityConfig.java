@@ -119,6 +119,10 @@ public class SecurityConfig {
                                     // policy: people read these before they
                                     // have an account.
                                     "/terms", "/returns", "/privacy", "/contact",
+                                    // The directory is for people deciding
+                                    // whether to buy at all, which is before
+                                    // they would ever make an account.
+                                    "/suppliers", "/suppliers/**",
                                     "/css/**", "/js/**", "/images/**",
                                     // Browsers fetch these before any session exists.
                                     "/favicon.svg", "/favicon.ico").permitAll()

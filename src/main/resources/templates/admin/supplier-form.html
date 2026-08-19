@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/layout :: head('Supplier')}"></head>
+<body>
+
+<div th:replace="~{admin/layout :: header}"></div>
+
+<main class="container narrow legal">
+    <p class="breadcrumb"><a th:href="@{/admin/suppliers}">&larr; All suppliers</a></p>
+
+    <h1 th:text="${supplierForm.id == null} ? 'Add a supplier' : 'Edit supplier'">Supplier</h1>
+    <div th:replace="~{admin/layout :: flash}"></div>
+
+    <section class="panel">
+        <form th:action="@{/admin/suppliers}" th:object="${supplierForm}" method="post">
+            <input type="hidden" th:field="*{id}">
+
+            <label>
+                Company name
+                <input type="text" th:field="*{name}">
+                <span class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}">error</span>
+            </label>
+
+            <div class="field-row">
+                <label>
+                    City
+                    <input type="text" th:field="*{city}">
+                    <span class="field-error" th:if="${#fields.hasErrors('city')}" th:errors="*{city}">error</span>
+                </label>
+                <label>
+                    Region <span class="optional">optional</span>
+                    <input type="text" th:field="*{region}" placeholder="Bundesland">
+                </label>
+            </div>
+
+            <label>
+                Website <span class="optional">optional</span>
+                <input type="url" th:field="*{website}" placeholder="https://">
+            </label>
+
+            <!--
+              General enquiries only. There is no field for a contact person
+              anywhere in this form, and that is the point: a named individual's
+              details are personal data under the GDPR, and the surest way to keep
+              them out of the database is to give nobody a box to type them into.
+            -->
+            <label>
+                General enquiries email <span class="optional">optional</span>
+                <input type="email" th:field="*{contactEmail}" placeholder="info@company.de">
+                <span class="field-error" th:if="${#fields.hasErrors('contactEmail')}"
+                      th:errors="*{contactEmail}">error</span>
+                <span class="note">
+                    A company address such as info@ or export@. Never a named person's.
+                </span>
+            </label>
+
+            <fieldset class="payment-methods">
+                <legend>Stocks</legend>
+                <label class="checkbox-row" th:each="c : ${allCategories}">
+                    <input type="checkbox" th:field="*{categories}" th:value="${c}">
+                    <span th:text="${c.displayName}">Category</span>
+                </label>
+            </fieldset>
+
+            <div class="field-row">
+                <label>
+                    Sells
+                    <select th:field="*{trade}">
+                        <option th:each="t : ${trades}" th:value="${t}" th:text="${t.displayName}">Trade</option>
+                    </select>
+                </label>
+                <label>
+                    Exports to Nigeria
+                    <select th:field="*{exportStance}">
+                        <option th:each="s : ${stances}" th:value="${s}" th:text="${s.displayName}">Stance</option>
+                    </select>
+                </label>
+            </div>
+
+            <div class="field-row">
+                <label>
+                    Minimum order <span class="optional">optional</span>
+                    <input type="text" th:field="*{minimumOrder}" placeholder="1 pallet, €5,000, none">
+                </label>
+                <label>
+                    Incoterms <span class="optional">optional</span>
+                    <input type="text" th:field="*{incoterms}" placeholder="EXW, FOB Hamburg, CIF Lagos">
+                </label>
+            </div>
+
+            <div class="field-row">
+                <label>
+                    Languages <span class="optional">optional</span>
+                    <input type="text" th:field="*{languages}" placeholder="German, English">
+                </label>
+                <label>
+                    Lead time in weeks <span class="optional">optional</span>
+                    <input type="number" th:field="*{leadTimeWeeks}" min="0" max="104" class="qty-input">
+                </label>
+            </div>
+
+            <label>
+                Notes <span class="optional">optional</span>
+                <textarea th:field="*{notes}" rows="4"></textarea>
+            </label>
+
+            <button type="submit" class="button-primary button-block">Save</button>
+        </form>
+    </section>
+
+    <!--
+      Verifying is its own action, not a field on this form. It is a statement
+      that somebody did something on a particular day, so it records the day
+      itself rather than trusting whoever is editing to set it honestly.
+    -->
+    <section class="panel mt-sm" th:if="${supplier != null}">
+        <h2>Record a check</h2>
+        <p class="note">
+            <span th:if="${supplier.verified}">
+                Last checked <span th:text="${supplier.verifiedAtDisplay}">date</span>:
+                <span th:text="${supplier.howVerified}">how</span>
+            </span>
+            <span th:unless="${supplier.verified}">Never checked.</span>
+        </p>
+        <form th:action="@{/admin/suppliers/{id}/verify(id=${supplier.id})}" method="post">
+            <label>
+                What did you do?
+                <input type="text" name="howVerified" required
+                       placeholder="Emailed export@, they confirmed FOB Hamburg">
+            </label>
+            <button type="submit" class="button-secondary button-block">Mark checked today</button>
+        </form>
+    </section>
+
+    <section class="panel mt-sm" th:if="${supplier != null}">
+        <h2>Remove</h2>
+        <p class="note">
+            Takes the entry off the public directory. The audit trail keeps the
+            record that it was removed, and by whom.
+        </p>
+        <form th:action="@{/admin/suppliers/{id}/delete(id=${supplier.id})}" method="post">
+            <button type="submit" class="link-button danger">Remove from directory</button>
+        </form>
+    </section>
+</main>
+
+</body>
+</html>

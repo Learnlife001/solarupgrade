@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${supplier.name})}"></head>
+<body>
+
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container narrow legal">
+    <p class="breadcrumb"><a th:href="@{/suppliers}">&larr; All suppliers</a></p>
+
+    <h1 th:text="${supplier.name}">Company</h1>
+
+    <p class="supplier-where">
+        <span th:text="${supplier.city}">City</span><span th:if="${supplier.region != null}"
+            th:text="', ' + ${supplier.region}">, region</span> &middot; Germany
+    </p>
+
+    <p>
+        <span class="export-pill"
+              th:classappend="'export-' + ${supplier.exportStance.name().toLowerCase()}"
+              th:text="${supplier.exportStance.displayName}">Exports</span>
+    </p>
+    <p class="note" th:text="${supplier.exportStance.explanation}">explanation</p>
+
+    <!--
+      A stale entry says so at the top rather than at the bottom. Somebody about
+      to email a company on the strength of terms we recorded a year ago should
+      know that before they read the terms, not after.
+    -->
+    <div class="draft-notice" th:if="${supplier.stale}">
+        <strong>This entry may be out of date.</strong>
+        It was last checked on <span th:text="${supplier.verifiedAtDisplay}">date</span>,
+        more than <span th:text="${staleAfterDays}">180</span> days ago. Confirm the
+        terms with the company before acting on anything here.
+    </div>
+
+    <div class="draft-notice" th:unless="${supplier.verified}">
+        <strong>Not checked yet.</strong>
+        Nobody has confirmed these details with the company. They are listed as a
+        starting point, not as fact.
+    </div>
+
+    <h2>Terms</h2>
+    <table class="legal-table">
+        <tbody>
+        <tr>
+            <th scope="row">Sells</th>
+            <td>
+                <span th:text="${supplier.trade.displayName}">Trade</span>
+                &mdash; <span th:text="${supplier.trade.explanation}">explanation</span>
+            </td>
+        </tr>
+        <tr th:if="${!#sets.isEmpty(supplier.categories)}">
+            <th scope="row">Stocks</th>
+            <td>
+                <span th:each="c, i : ${supplier.categories}">
+                    <span th:text="${c.displayName}">Category</span><span th:if="${!i.last}">, </span>
+                </span>
+            </td>
+        </tr>
+        <tr th:if="${supplier.minimumOrder != null}">
+            <th scope="row">Minimum order</th>
+            <td th:text="${supplier.minimumOrder}">1 pallet</td>
+        </tr>
+        <tr th:if="${supplier.incoterms != null}">
+            <th scope="row">Incoterms</th>
+            <td>
+                <span th:text="${supplier.incoterms}">FOB</span>
+                <span class="note">&mdash; decides who pays the freight and from where.</span>
+            </td>
+        </tr>
+        <tr th:if="${supplier.leadTimeWeeks != null}">
+            <th scope="row">Lead time</th>
+            <td><span th:text="${supplier.leadTimeWeeks}">4</span> weeks, before shipping</td>
+        </tr>
+        <tr th:if="${supplier.languages != null}">
+            <th scope="row">Languages</th>
+            <td th:text="${supplier.languages}">German, English</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <h2>Contact</h2>
+    <p>
+        <a th:if="${supplier.website != null}" th:href="${supplier.website}"
+           rel="noopener noreferrer nofollow" target="_blank"
+           th:text="${supplier.website}">website</a>
+        <span class="note" th:if="${supplier.website == null}">No website recorded.</span>
+    </p>
+    <p th:if="${supplier.contactEmail != null}">
+        <a th:href="'mailto:' + ${supplier.contactEmail}" th:text="${supplier.contactEmail}">email</a>
+    </p>
+    <p class="note">
+        General enquiry addresses only. We do not publish the name, direct line or
+        personal address of anyone who works at these companies.
+    </p>
+
+    <section th:if="${supplier.notes != null}">
+        <h2>Notes</h2>
+        <p th:text="${supplier.notes}">notes</p>
+    </section>
+
+    <h2>How we checked</h2>
+    <p th:if="${supplier.verified}">
+        <span th:text="${supplier.howVerified}">Emailed, they replied.</span><br>
+        <span class="note">Last checked <span th:text="${supplier.verifiedAtDisplay}">date</span>.</span>
+    </p>
+    <p class="note" th:unless="${supplier.verified}">
+        Not checked yet.
+    </p>
+
+    <section class="panel mt-lg">
+        <h2>Or skip all of it</h2>
+        <p class="note">
+            Buying from us costs more per panel than a pallet from Germany, and
+            includes the freight, the customs clearing, the naira pricing and the
+            warranty being someone else's problem.
+        </p>
+        <a class="button-primary" th:href="@{/products}">See the catalogue</a>
+    </section>
+</main>
+
+<div th:replace="~{fragments/layout :: footer}"></div>
+
+</body>
+</html>

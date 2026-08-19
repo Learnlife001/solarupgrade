@@ -1127,3 +1127,101 @@ input[type="number"].qty-input { width: 4.6rem; margin-top: 0; }
 
 .footer-links a { color: var(--ink-2); text-decoration: none; }
 .footer-links a:hover { color: var(--ink); text-decoration: underline; }
+
+/* --- Supplier directory ----------------------------------------------------- */
+
+/* The honest panel about what direct import costs. Set apart from the list so
+   it reads as context rather than as one more entry. */
+.import-reality {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 1.75rem;
+    margin-bottom: 2rem;
+}
+
+.import-reality h2 { margin-bottom: 1.1rem; font-size: 1.2rem; }
+
+.import-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
+    gap: 1.1rem 1.75rem;
+    margin-bottom: 1rem;
+}
+
+.import-grid h3 { margin-bottom: .2rem; font-size: .95rem; }
+.import-grid p { margin: 0; color: var(--ink-2); font-size: .9rem; }
+
+.supplier-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: .85rem;
+    margin-bottom: 1.5rem;
+}
+
+.supplier-filters label { margin: 0; font-size: .85rem; }
+.supplier-filters input, .supplier-filters select { min-width: 11rem; }
+
+.supplier-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 1rem; }
+
+.supplier-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    padding: 1.1rem 1.25rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.supplier-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.supplier-head h2 { margin: 0; font-size: 1.08rem; }
+.supplier-where { margin: .2rem 0 .6rem; color: var(--ink-2); font-size: .9rem; }
+.supplier-tags { margin: 0 0 .5rem; display: flex; flex-wrap: wrap; gap: .35rem; }
+.supplier-checked { margin: 0; color: var(--ink-2); font-size: .85rem; }
+
+.tag {
+    display: inline-block;
+    padding: .1rem .5rem;
+    border-radius: 999px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    color: var(--ink-2);
+    font-size: .78rem;
+    white-space: nowrap;
+}
+
+.tag.stale { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); }
+.tag.unchecked { background: var(--surface-2); border-style: dashed; }
+
+/* The export answer is the reason to read the directory, so it carries the
+   strongest colour on the card. */
+.export-pill {
+    display: inline-block;
+    padding: .15rem .6rem;
+    border-radius: 999px;
+    font-size: .78rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.export-yes { background: var(--accent-soft); color: var(--accent-ink); }
+.export-on_request { background: var(--sun-soft); color: var(--sun-ink); }
+.export-no { background: var(--surface-2); color: var(--ink-2); }
+.export-unknown { background: var(--surface-2); color: var(--ink-2); border: 1px dashed var(--line-strong); }
+
+.checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin: 0 0 .35rem;
+    font-size: .92rem;
+}
+
+.checkbox-row input { width: auto; margin: 0; }

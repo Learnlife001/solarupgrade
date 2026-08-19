@@ -22,6 +22,7 @@ public class AuditService {
 
     public static final String ORDER = "order";
     public static final String PRODUCT = "product";
+    public static final String SUPPLIER = "supplier";
 
     private final AdminActionRepository actions;
 

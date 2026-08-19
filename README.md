@@ -272,6 +272,72 @@ schema has nowhere to put one.
 **These pages have not been reviewed by a lawyer,** and every one of them says
 so. They are a solid starting point, not advice.
 
+## The German supplier directory
+
+`/suppliers`, public, no account needed. A searchable list of German solar
+suppliers and, for each one, whether they will actually ship to Nigeria.
+
+**Why a shop lists the people it buys from.** Customers ask "could I just
+import this myself?" whether or not the site acknowledges it. Answering it
+honestly costs the sales that were never going to happen — somebody willing to
+handle a container, a customs agent and a euro invoice was not going to pay a
+markup for convenience — and improves the rest, because a buyer who has seen
+what direct import involves and chose the shop chose it on the facts. The
+alternative, staying quiet and hoping nobody looks, only works until somebody
+looks.
+
+So every directory page carries the same panel: minimum order quantities,
+freight, duty and clearing, paying in euro, warranty claims across a border,
+and English not being a given. And every page offers the shop as the other
+option, framed as skipping all of it rather than as the safe choice.
+
+### What each entry says
+
+| Field | Why it is there |
+|---|---|
+| Export stance | Whether they ship to Nigeria: **Exports to Nigeria**, **On request**, **EU only**, or **Not yet asked** |
+| Trade | Retail, wholesale or both — a wholesaler with a 40-unit minimum is no use to one household |
+| Categories | The shop's own vocabulary, so "who sells inverters" is one filter |
+| City and region | Grouping visits or shipments by Bundesland |
+| Website, general enquiries address | Where to start |
+| Notes | Anything that does not fit a field: minimums, languages, freight terms |
+| Last checked, and how | The point of the whole thing |
+
+**Export stance is the field worth having.** Most German wholesalers sell
+inside the EU only — VAT reclaim, freight and cross-border warranty claims make
+export a nuisance they decline — so "who actually exports" is what no public
+list tells you. `Not yet asked` is a real answer and stays visible as one;
+quietly promoting it to `yes` would send somebody into a pointless negotiation.
+An `EU only` entry is kept rather than deleted, because knowing not to send the
+email is worth as much as knowing to send it.
+
+**Every entry says when it was last checked and how.** "Emailed export@, they
+confirmed FOB Hamburg" is evidence; a date on its own is a claim with nothing
+behind it, so `markVerified` refuses a check with no account of what was done.
+After 180 days an entry is marked stale, and the detail page says so above the
+terms rather than below them — an out-of-date export answer read as current is
+the one way this page could cost somebody real money.
+
+### No named people, anywhere
+
+Company name, general enquiries address, city. There is deliberately **no
+contact-person field** in the entity, the form or the schema. A named
+salesperson's direct line is personal data under the GDPR, and publishing it
+without a lawful basis is a real exposure for whoever runs this — so the field
+does not exist to be filled in later by someone who has not thought about it.
+
+### Adding and checking entries
+
+`/admin/suppliers`, behind `ROLE_ADMIN`, with add, edit, check and remove. The
+public side has no route that writes anything: an open directory is a spam
+target, and an unchecked entry is worse than a missing one. Every change is
+written to the same audit trail as orders and stock, so a listing that turns
+out to be wrong can be traced to who added it and when.
+
+The seeded entries are all named "(example)" and all unverified, for the same
+reason the legal pages carry a draft notice — invented supplier data that looks
+real is worse than an empty page, because somebody would email it.
+
 ## The admin area
 
 `/admin`, behind `ROLE_ADMIN`. It shows every order across every customer,
@@ -284,6 +350,7 @@ of it.
 | `/admin/orders` | Every order, filterable by status |
 | `/admin/orders/{id}` | Items, delivery address, payment, and the one action its status allows |
 | `/admin/products` | Stock, lowest first, editable |
+| `/admin/suppliers` | The German directory: add, edit, mark checked, remove |
 
 **Only the action the status allows is offered.** A paid order can be marked
 shipped; an unpaid one can be cancelled and its stock returned. Neither button
@@ -788,21 +855,28 @@ money and full timestamp precision.
 
 ```
 src/main/java/com/shoppingapp/shoppingwebapp/
-  config/      SecurityConfig, DataSeeder
-  controller/  product, cart, checkout, order and auth controllers
+  config/      SecurityConfig, DataSeeder, AdminBootstrap, AdminHostFilter,
+               Brand and BusinessDetails (settings), StartupOrder
+  controller/  product, cart, checkout, order and auth controllers,
+               the admin controllers, and the public supplier directory
   dto/         validated form backing objects
-  model/       Product, User, CartItem, Order, OrderItem and enums
+  model/       Product, User, CartItem, Order, OrderItem, Supplier, AdminAction
+               and their enums
   repository/  Spring Data JPA repositories
   security/    rate limiting, login lockout, password policy
-  service/     ProductService, CartService, OrderService, UserService, EmailService
+  service/     ProductService, CartService, OrderService, UserService,
+               SupplierService, AuditService, EmailService
                PaymentReminderJob and OrderExpiryJob (scheduled)
+  service/email/   EmailHtml and OrderEmailParts -- the HTML email toolkit
   service/payment/ PayPalClient, PaymentService
   support/     Redact -- keeps customer addresses out of log lines
 src/main/resources/
   db/migration/ Flyway migrations, one directory per dialect
   templates/    Thymeleaf pages; fragments/layout.html holds the shared header
+  templates/admin/ the back office, with its own layout fragment
   static/css/   stylesheet
-  static/js/    app.js -- progressive enhancement only, never required
+  static/js/    theme.js -- sets the theme before first paint, so not deferred
+                app.js   -- progressive enhancement only, never required
 ```
 
 ## Known gaps
@@ -823,6 +897,10 @@ These are deliberate and worth picking up next:
   stock under a row lock, so two shoppers racing for the last unit cannot both
   win — the loser is refused at checkout. An order left unpaid for 72 hours is
   cancelled and its stock returned; see `OrderExpiryJob`.
+- **The supplier directory is example data.** The four seeded entries are
+  named "(example)" and none has been checked. Real listings need real
+  research: emailing each company's general enquiries address, asking whether
+  they export to Nigeria, and recording the answer with the date.
 - **The catalogue is sample data.** Specifications in migration V11 are
   invented and prices were converted at a round rate. Both need real figures
   before anything is sold.

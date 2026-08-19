@@ -10,7 +10,11 @@ public enum AdminActionType {
 
     ORDER_SHIPPED("Marked as shipped"),
     ORDER_CANCELLED("Cancelled and stock returned"),
-    STOCK_SET("Stock level set");
+    STOCK_SET("Stock level set"),
+    SUPPLIER_ADDED("Supplier added to the directory"),
+    SUPPLIER_UPDATED("Supplier details changed"),
+    SUPPLIER_VERIFIED("Supplier checked"),
+    SUPPLIER_REMOVED("Supplier removed from the directory");
 
     private final String displayName;
 

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/layout :: head('Suppliers')}"></head>
+<body>
+
+<div th:replace="~{admin/layout :: header}"></div>
+
+<main class="container">
+    <div class="section-head">
+        <h1>Supplier directory</h1>
+        <p>German companies, and whether they export to Nigeria.</p>
+    </div>
+    <div th:replace="~{admin/layout :: flash}"></div>
+
+    <p><a class="button-primary" th:href="@{/admin/suppliers/new}">Add a supplier</a></p>
+
+    <p class="note" th:if="${#lists.isEmpty(suppliers)}">
+        Nothing listed yet. The public page says so honestly rather than showing
+        an empty table.
+    </p>
+
+    <table class="admin-table" th:unless="${#lists.isEmpty(suppliers)}">
+        <thead>
+        <tr>
+            <th>Company</th>
+            <th>Where</th>
+            <th>Exports</th>
+            <th>Sells</th>
+            <th>Checked</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="s : ${suppliers}">
+            <td>
+                <a th:href="@{/suppliers/{id}(id=${s.id})}" th:text="${s.name}">Name</a>
+            </td>
+            <td th:text="${s.city}">City</td>
+            <td>
+                <span class="export-pill"
+                      th:classappend="'export-' + ${s.exportStance.name().toLowerCase()}"
+                      th:text="${s.exportStance.displayName}">Stance</span>
+            </td>
+            <td th:text="${s.trade.displayName}">Trade</td>
+            <td>
+                <span th:if="${s.verified}" th:text="${s.verifiedAtDisplay}">date</span>
+                <span class="tag stale" th:if="${s.stale}">stale</span>
+                <span class="tag unchecked" th:unless="${s.verified}">never</span>
+            </td>
+            <td>
+                <a class="button-secondary button-small"
+                   th:href="@{/admin/suppliers/{id}/edit(id=${s.id})}">Edit</a>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+
+</body>
+</html>
