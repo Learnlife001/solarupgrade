@@ -53,7 +53,8 @@ public final class EmailHtml {
      *                  client picks the first words of the body instead, which
      *                  is usually "Hi" and the customer's own name.
      */
-    public static String document(String title, String preheader, String body, String footerNote) {
+    public static String document(String brandName, String brandMark, String tagline,
+                                  String title, String preheader, String body, String footerNote) {
         return """
                 <!DOCTYPE html>
                 <html lang="en">
@@ -73,7 +74,7 @@ public final class EmailHtml {
                            style="width:600px;max-width:100%;">
 
                       <tr><td style="padding:0 0 18px 4px;font:700 20px/1.2 %FONT%;color:%INK%;">
-                        <span style="color:%ACCENT%;">&#9728;</span> SolarUpgrade
+                        <span style="color:%ACCENT%;">%MARK%</span> %BRAND%
                       </td></tr>
 
                       <tr><td style="background:%SURFACE%;border:1px solid %LINE%;border-radius:14px;
@@ -83,7 +84,7 @@ public final class EmailHtml {
 
                       <tr><td style="padding:18px 4px 0;font:400 12px/1.6 %FONT%;color:%INK_2%;">
                         %FOOTER%<br>
-                        SolarUpgrade &mdash; panels, inverters and storage, delivered nationwide.
+                        %BRAND% &mdash; %TAGLINE%
                       </td></tr>
 
                     </table>
@@ -92,6 +93,9 @@ public final class EmailHtml {
                 </body>
                 </html>
                 """
+                .replace("%BRAND%", escape(brandName))
+                .replace("%MARK%", escape(brandMark))
+                .replace("%TAGLINE%", escape(tagline))
                 .replace("%TITLE%", escape(title))
                 .replace("%PREHEADER%", escape(preheader))
                 .replace("%BODY%", body)

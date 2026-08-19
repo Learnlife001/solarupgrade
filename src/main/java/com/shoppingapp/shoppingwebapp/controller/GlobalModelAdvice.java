@@ -1,5 +1,6 @@
 package com.shoppingapp.shoppingwebapp.controller;
 
+import com.shoppingapp.shoppingwebapp.config.Brand;
 import com.shoppingapp.shoppingwebapp.model.Category;
 import com.shoppingapp.shoppingwebapp.service.CartService;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -16,10 +17,21 @@ public class GlobalModelAdvice {
 
     private final CartService cartService;
     private final CurrentUserSupport currentUser;
+    private final Brand brand;
 
-    public GlobalModelAdvice(CartService cartService, CurrentUserSupport currentUser) {
+    public GlobalModelAdvice(CartService cartService, CurrentUserSupport currentUser, Brand brand) {
         this.cartService = cartService;
         this.currentUser = currentUser;
+        this.brand = brand;
+    }
+
+    /**
+     * Available to every template, so no page has to be given the name it is
+     * supposed to display.
+     */
+    @ModelAttribute("brand")
+    public Brand brand() {
+        return brand;
     }
 
     @ModelAttribute("cartCount")

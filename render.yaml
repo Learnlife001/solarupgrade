@@ -122,6 +122,22 @@ services:
       - key: APP_ADMIN_HOST
         sync: false
 
+      # --- Brand ------------------------------------------------------------
+      # The name on the shop, in one place. Unset uses the defaults in
+      # application.properties, which keep it working out of the box.
+      #
+      # Non-ASCII values are safe: the Dockerfile sets LANG so the JVM reads
+      # environment variables as UTF-8. Without that the container's ASCII
+      # default turns an accented character into a question mark.
+      - key: APP_BRAND_NAME
+        sync: false
+      - key: APP_BRAND_TAGLINE
+        sync: false
+      # Says the catalogue is sample data. Set to false once real stock is
+      # loaded, or the footer contradicts the shop.
+      - key: APP_BRAND_DEMO_NOTICE
+        value: "true"
+
       # --- Business details -------------------------------------------------
       # What the terms, returns, privacy and contact pages are built from.
       # Until every one of these is set, each legal page carries a visible

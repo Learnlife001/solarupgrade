@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head('Terms of sale · SolarUpgrade')}"></head>
+<head th:replace="~{fragments/layout :: head('Terms of sale')}"></head>
 <body>
 
 <div th:replace="~{fragments/layout :: header}"></div>
@@ -16,7 +16,7 @@
 
     <h2>Who you are buying from</h2>
     <p>
-        SolarUpgrade is operated by
+        <span th:text="${brand.name}">This shop</span> is operated by
         <strong th:text="${business.legalNameOrPlaceholder}">[registered company name]</strong>,
         registered in Nigeria under RC
         <span th:text="${business.registrationNumberOrPlaceholder}">[RC number]</span>,

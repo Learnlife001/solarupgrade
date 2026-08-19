@@ -4,7 +4,12 @@
 <head th:fragment="head(pageTitle)">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title th:text="${pageTitle}">SolarUpgrade</title>
+    <!--
+      The fragment appends the shop's name rather than each page repeating it:
+      21 call sites used to carry it, which is 21 places to miss when the shop
+      is renamed.
+    -->
+    <title th:text="${pageTitle} + ' · ' + ${brand.name}">Shop</title>
     <!-- SVG favicon so the monogram stays sharp on any display. -->
     <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
     <link rel="stylesheet" th:href="@{/css/style.css}">
@@ -23,8 +28,8 @@
 <header th:fragment="header" class="site-header">
     <div class="header-inner">
         <a class="brand" th:href="@{/}">
-            <span class="brand-mark" aria-hidden="true">&#9728;</span>
-            SolarUpgrade
+            <span class="brand-mark" aria-hidden="true" th:text="${brand.mark}">&#9728;</span>
+            <span th:text="${brand.name}">Shop</span>
         </a>
 
         <nav class="main-nav">
@@ -70,7 +75,14 @@
         <a th:href="@{/privacy}">Privacy</a>
         <a th:href="@{/contact}">Contact</a>
     </nav>
-    <p>SolarUpgrade &mdash; demo storefront. Prices and stock are sample data.</p>
+    <p>
+        <span th:text="${brand.name}">Shop</span> &mdash;
+        <span th:text="${brand.tagline}">tagline</span>
+    </p>
+    <!-- Honest today, a lie the moment somebody loads real stock; hence a setting. -->
+    <p class="note" th:if="${brand.demoNotice}">
+        Demo storefront &mdash; prices and stock are sample data.
+    </p>
 </footer>
 
 </body>

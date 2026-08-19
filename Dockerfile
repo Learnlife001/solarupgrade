@@ -32,6 +32,14 @@ USER spring
 COPY --from=build --chown=spring:spring /workspace/build/libs/*.jar app.jar
 
 # Render injects PORT and expects the process to bind it.
+# The container's locale decides how the JVM reads environment variables and
+# command-line arguments (sun.jnu.encoding). The default here is ASCII, which
+# silently mangles any non-ASCII setting -- a brand mark, a legal name or an
+# address with an accented character arrives as question marks. Found by
+# renaming the shop and watching the header badge render as "??".
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+
 ENV PORT=8080
 EXPOSE 8080
 

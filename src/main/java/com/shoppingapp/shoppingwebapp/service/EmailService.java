@@ -1,5 +1,6 @@
 package com.shoppingapp.shoppingwebapp.service;
 
+import com.shoppingapp.shoppingwebapp.config.Brand;
 import com.shoppingapp.shoppingwebapp.model.Order;
 import com.shoppingapp.shoppingwebapp.model.OrderItem;
 import com.shoppingapp.shoppingwebapp.model.User;
@@ -41,15 +42,18 @@ public class EmailService {
      */
     private final ObjectProvider<ResendMailer> resendProvider;
     private final ObjectProvider<JavaMailSender> mailSenderProvider;
+    private final Brand brand;
     private final String fromAddress;
     private final String baseUrl;
 
     public EmailService(ObjectProvider<ResendMailer> resendProvider,
                         ObjectProvider<JavaMailSender> mailSenderProvider,
-                        @Value("${app.mail.from:no-reply@solarupgrade.example}") String fromAddress,
+                        Brand brand,
+                        @Value("${app.mail.from:no-reply@example.invalid}") String fromAddress,
                         @Value("${app.base-url:http://localhost:8080}") String baseUrl) {
         this.resendProvider = resendProvider;
         this.mailSenderProvider = mailSenderProvider;
+        this.brand = brand;
         this.fromAddress = fromAddress;
         // Links in email must be absolute, and the app cannot infer its own
         // public address from behind a proxy.
@@ -61,12 +65,26 @@ public class EmailService {
     }
 
     /**
+     * The shop's name, for a subject line or a sentence. One accessor rather
+     * than the literal in eighteen places, which is what it was.
+     */
+    private String shop() {
+        return brand.getName();
+    }
+
+    /** The HTML shell, already carrying the brand. */
+    private String document(String title, String preheader, String body, String footerNote) {
+        return EmailHtml.document(brand.getName(), brand.getMark(), brand.getTagline(),
+                title, preheader, body, footerNote);
+    }
+
+    /**
      * A failure to send must never roll back an order that was already written,
      * so problems here are logged rather than thrown.
      */
     public void sendOrderConfirmation(Order order) {
-        String html = EmailHtml.document(
-                "Your SolarUpgrade order #" + order.getId(),
+        String html = document(
+                "Your " + shop() + " order #" + order.getId(),
                 "We have your order. Nothing has been charged yet.",
                 EmailHtml.heading("Thanks, " + order.getUser().getFullName())
                         + EmailHtml.pill("Awaiting payment", EmailHtml.SUN_SOFT, EmailHtml.SUN_INK)
@@ -83,7 +101,7 @@ public class EmailService {
                 "You are receiving this because you placed an order with us.");
 
         send(order.getUser().getEmail(),
-                "Your SolarUpgrade order #" + order.getId(),
+                "Your " + shop() + " order #" + order.getId(),
                 textOrderBody(order, "Thanks for your order. Here is what we have:", true),
                 html,
                 "confirmation for order " + order.getId());
@@ -97,8 +115,8 @@ public class EmailService {
      * a second copy.
      */
     public void sendPaymentReceived(Order order) {
-        String html = EmailHtml.document(
-                "Payment received — SolarUpgrade order #" + order.getId(),
+        String html = document(
+                "Payment received — " + shop() + " order #" + order.getId(),
                 "Payment confirmed. Nothing further is needed from you.",
                 EmailHtml.heading("Payment received")
                         + EmailHtml.pill("Paid", EmailHtml.ACCENT_SOFT, EmailHtml.ACCENT_INK)
@@ -118,7 +136,7 @@ public class EmailService {
                 "This is your receipt for order #" + order.getId() + ".");
 
         send(order.getUser().getEmail(),
-                "Payment received — SolarUpgrade order #" + order.getId(),
+                "Payment received — " + shop() + " order #" + order.getId(),
                 textOrderBody(order, "Your payment has come through and this order is confirmed.", true)
                         + "\nKeep this as your receipt.\n",
                 html,
@@ -130,8 +148,8 @@ public class EmailService {
      * {@link PaymentReminderJob}.
      */
     public void sendPaymentReminder(Order order) {
-        String html = EmailHtml.document(
-                "Finish your SolarUpgrade order #" + order.getId(),
+        String html = document(
+                "Finish your " + shop() + " order #" + order.getId(),
                 "Your order is still waiting for payment.",
                 EmailHtml.heading("Still want these?")
                         + EmailHtml.pill("Awaiting payment", EmailHtml.SUN_SOFT, EmailHtml.SUN_INK)
@@ -149,7 +167,7 @@ public class EmailService {
                 "You placed this order and it has not been paid for.");
 
         send(order.getUser().getEmail(),
-                "Finish your SolarUpgrade order #" + order.getId(),
+                "Finish your " + shop() + " order #" + order.getId(),
                 textOrderBody(order, "This order is still waiting for payment, so we have not dispatched it.", true)
                         + "\nFinish paying: " + orderUrl(order)
                         + "\n\nIf you have changed your mind, ignore this and the order will lapse. "
@@ -163,8 +181,8 @@ public class EmailService {
      * back on the shelf.
      */
     public void sendOrderExpired(Order order) {
-        String html = EmailHtml.document(
-                "Your SolarUpgrade order #" + order.getId() + " has lapsed",
+        String html = document(
+                "Your " + shop() + " order #" + order.getId() + " has lapsed",
                 "Nothing was charged. The items are back in stock.",
                 EmailHtml.heading("Order #" + order.getId() + " has lapsed")
                         + EmailHtml.pill("Cancelled", "#fdecea", "#b3261e")
@@ -180,7 +198,7 @@ public class EmailService {
                 "You placed this order and it was not paid for.");
 
         send(order.getUser().getEmail(),
-                "Your SolarUpgrade order #" + order.getId() + " has lapsed",
+                "Your " + shop() + " order #" + order.getId() + " has lapsed",
                 textOrderBody(order, "This order was never paid for, so we have released it and put the "
                                 + "items back in stock. Nothing has been charged.", true)
                         + "\nStill want them? " + baseUrl + "/products\n",
@@ -196,8 +214,8 @@ public class EmailService {
      * nobody needs to check.
      */
     public void sendOrderShipped(Order order) {
-        String html = EmailHtml.document(
-                "On its way — SolarUpgrade order #" + order.getId(),
+        String html = document(
+                "On its way — " + shop() + " order #" + order.getId(),
                 "Order #" + order.getId() + " has been dispatched.",
                 EmailHtml.heading("On its way")
                         + EmailHtml.pill("Shipped", EmailHtml.ACCENT_SOFT, EmailHtml.ACCENT_INK)
@@ -228,7 +246,7 @@ public class EmailService {
                 .append("\n\nReply to this email if anything is wrong with the delivery details.\n");
 
         send(order.getUser().getEmail(),
-                "On its way — SolarUpgrade order #" + order.getId(),
+                "On its way — " + shop() + " order #" + order.getId(),
                 text.toString(),
                 html,
                 "dispatch notice for order " + order.getId());
@@ -243,9 +261,9 @@ public class EmailService {
      */
     public void sendVerification(User user) {
         String code = user.getVerificationCode();
-        String html = EmailHtml.document(
+        String html = document(
                 "Confirm your email",
-                code + " is your SolarUpgrade confirmation code.",
+                code + " is your " + shop() + " confirmation code.",
                 EmailHtml.heading("Confirm your email")
                         + EmailHtml.paragraph("Hi " + escape(user.getFullName())
                                 + ", here is the code that finishes setting up your account.")
@@ -259,7 +277,7 @@ public class EmailService {
                 "You are receiving this because someone signed up with this address.");
 
         String text = "Hi " + user.getFullName() + ",\n\n"
-                + "Your SolarUpgrade confirmation code is:\n\n"
+                + "Your " + shop() + " confirmation code is:\n\n"
                 + "    " + code + "\n\n"
                 + "Enter it at " + baseUrl + "/verify to finish setting up your account.\n\n"
                 + "The code expires in 15 minutes. Until it is used you will not be able to sign in.\n\n"
@@ -267,7 +285,7 @@ public class EmailService {
                 + "Nobody can use this code without also knowing your email address.\n";
 
         // Subject carries the code too, so it is readable from a notification.
-        send(user.getEmail(), code + " is your SolarUpgrade confirmation code", text, html,
+        send(user.getEmail(), code + " is your " + shop() + " confirmation code", text, html,
                 "verification code for " + Redact.email(user.getEmail()));
     }
 
@@ -280,12 +298,12 @@ public class EmailService {
      */
     public void sendPasswordReset(User user, String token) {
         String link = baseUrl + "/reset-password?token=" + token;
-        String html = EmailHtml.document(
-                "Reset your SolarUpgrade password",
+        String html = document(
+                "Reset your " + shop() + " password",
                 "A link to set a new password. It expires in 30 minutes.",
                 EmailHtml.heading("Reset your password")
                         + EmailHtml.paragraph("Hi " + escape(user.getFullName())
-                                + ", someone asked to reset the password on your SolarUpgrade account.")
+                                + ", someone asked to reset the password on your " + shop() + " account.")
                         + EmailHtml.button("Set a new password", link)
                         + EmailHtml.small("The link works once and expires in 30 minutes.")
                         + EmailHtml.small("If this was not you, ignore this email. Your password has not "
@@ -293,14 +311,14 @@ public class EmailService {
                 "You are receiving this because a password reset was requested for this address.");
 
         String text = "Hi " + user.getFullName() + ",\n\n"
-                + "Someone asked to reset the password on your SolarUpgrade account.\n\n"
+                + "Someone asked to reset the password on your " + shop() + " account.\n\n"
                 + "Set a new password here:\n\n"
                 + "    " + link + "\n\n"
                 + "The link works once and expires in 30 minutes.\n\n"
                 + "If this was not you, ignore this email. Your password has not changed "
                 + "and nobody can use this link without reading this message.\n";
 
-        send(user.getEmail(), "Reset your SolarUpgrade password", text, html,
+        send(user.getEmail(), "Reset your " + shop() + " password", text, html,
                 "password reset for " + Redact.email(user.getEmail()));
     }
 

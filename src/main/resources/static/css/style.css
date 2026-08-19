@@ -1,5 +1,5 @@
 /* ---------------------------------------------------------------------------
-   SolarUpgrade design tokens.
+   Design tokens.
    Light values live on :root; the dark block only re-points the same tokens,
    so every component below is written once and works in both themes.
    --------------------------------------------------------------------------- */

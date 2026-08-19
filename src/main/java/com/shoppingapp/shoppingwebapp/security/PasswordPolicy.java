@@ -25,7 +25,7 @@ public final class PasswordPolicy {
     private static final Set<String> BLOCKED = Set.of(
             "password", "password1", "password12", "password123", "password1234",
             "passw0rd", "qwertyuiop", "1234567890", "12345678901", "letmein123",
-            "iloveyou1", "admin12345", "welcome123", "solarupgrade", "changeme123",
+            "iloveyou1", "admin12345", "welcome123", "changeme123",
             "abc12345678", "qwerty12345", "trustno1234", "monkey12345", "football123");
 
     private PasswordPolicy() {

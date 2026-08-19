@@ -5,6 +5,7 @@ import com.shoppingapp.shoppingwebapp.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -30,6 +31,7 @@ public class DataSeeder {
     private static final Logger log = LoggerFactory.getLogger(DataSeeder.class);
 
     @Bean
+    @Order(StartupOrder.SEED_DEMO_DATA)
     CommandLineRunner seedDemoAccount(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         return args -> {
             if (userRepository.existsByEmail("demo@solarupgrade.example")) {

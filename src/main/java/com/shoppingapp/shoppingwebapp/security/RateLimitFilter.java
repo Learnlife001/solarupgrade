@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -61,9 +62,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private final RateLimiter rateLimiter;
+    private final String brandName;
 
-    public RateLimitFilter(RateLimiter rateLimiter) {
+    public RateLimitFilter(RateLimiter rateLimiter,
+                           @Value("${app.brand.name:SolarUpgrade}") String brandName) {
         this.rateLimiter = rateLimiter;
+        this.brandName = brandName;
     }
 
     @Override
@@ -107,7 +111,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
      * put a message in. Retry-After is set so anything automated is told when
      * to come back rather than hammering.
      */
-    private static void respondTooMany(HttpServletResponse response, Duration retryAfter) throws IOException {
+    private void respondTooMany(HttpServletResponse response, Duration retryAfter) throws IOException {
         long minutes = Math.max(1, (retryAfter.toSeconds() + 59) / 60);
         // 429 has no constant in the servlet API; Spring's enum does.
         response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
@@ -117,7 +121,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 <!DOCTYPE html>
                 <html lang="en"><head><meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1">
-                <title>Too many attempts · SolarUpgrade</title>
+                <title>Too many attempts · %s</title>
                 <link rel="stylesheet" href="/css/style.css"></head>
                 <body><main class="container narrow">
                 <h1>Too many attempts</h1>
@@ -125,6 +129,6 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 with your account &mdash; please try again shortly.</p>
                 <p class="mt-sm"><a href="/products">Back to the shop</a></p>
                 </main></body></html>
-                """.formatted(minutes));
+                """.formatted(brandName, minutes));
     }
 }

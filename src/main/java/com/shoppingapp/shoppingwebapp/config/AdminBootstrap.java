@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
@@ -35,7 +36,20 @@ public class AdminBootstrap {
 
     private static final Logger log = LoggerFactory.getLogger(AdminBootstrap.class);
 
+    /**
+     * Runs after {@link DataSeeder}; see {@link StartupOrder}.
+     *
+     * <p>Unordered it ran <em>before</em> the seeder and warned that the account
+     * it was asked to promote did not exist -- one log line before the seeder
+     * created it. On a fresh install the grant then silently did not happen
+     * until the next restart.
+     *
+     * <p>Both runners carry an explicit number rather than one of them relying
+     * on LOWEST_PRECEDENCE: an unordered runner is already treated as lowest, so
+     * the two tied and the tie was broken arbitrarily.
+     */
     @Bean
+    @Order(StartupOrder.GRANT_ADMIN_ROLE)
     ApplicationRunner grantAdminRole(UserRepository users,
                                      @Value("${app.admin.emails:}") String configured) {
         return args -> apply(users, configured);

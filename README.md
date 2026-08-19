@@ -193,6 +193,49 @@ To see them, dump the rendered HTML and open it in a browser:
 ./gradlew test --tests '*EmailRenderTest*' -Demail.dump.dir=/tmp/mail
 ```
 
+## Renaming the shop
+
+The name was typed into 51 places across 29 files — every page title, the
+header, the admin bar, every email subject and body, a hard-coded error page in
+the rate limiter. Whoever ran this next would have started with a
+find-and-replace and missed some. It is now one setting.
+
+| Setting | Default |
+|---|---|
+| `APP_BRAND_NAME` | SolarUpgrade |
+| `APP_BRAND_TAGLINE` | Panels, inverters and storage, delivered nationwide. |
+| `APP_BRAND_MARK` | ☀ — the glyph in the header badge and in emails |
+| `APP_BRAND_DEMO_NOTICE` | `true` — says the catalogue is sample data |
+
+The defaults keep the shop working with nothing configured. `BrandRenameTest`
+runs the whole app under a different name and asserts the new one appears in
+page titles, the header, the admin bar, the legal pages, every email body and
+subject, and the rate limiter's own page — **and that the old name appears
+nowhere**. Checking only the first half would pass while a stale name sat in an
+email subject, which is the failure this replaced.
+
+`APP_BRAND_DEMO_NOTICE` exists because "prices and stock are sample data" is
+honest today and a lie the moment somebody loads real stock.
+
+### Startup order is explicit
+
+`DataSeeder` runs before `AdminBootstrap`, and both carry a number from
+`StartupOrder`. Unordered, the bootstrap ran first and warned that the account
+it was asked to promote did not exist — one log line before the seeder created
+it, so on a fresh install the admin grant silently did not happen until the next
+restart. Marking only one of them lowest-precedence does not fix it: an
+unordered runner is already treated as lowest, so the two tie and the winner is
+whichever bean was registered first.
+
+### The container's locale is UTF-8, deliberately
+
+`LANG` and `LC_ALL` are set in the Dockerfile. The JVM reads environment
+variables and command-line arguments using `sun.jnu.encoding`, which follows the
+container's locale — ASCII by default on these images. Any non-ASCII setting
+then arrives mangled: a brand mark, or a legal name or address with an accented
+character. Found by renaming the shop and watching the header badge render as
+`??`.
+
 ## Terms, returns, privacy and contact
 
 Four public pages at `/terms`, `/returns`, `/privacy` and `/contact`, linked

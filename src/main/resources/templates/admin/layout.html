@@ -9,7 +9,7 @@
 <head th:fragment="head(pageTitle)">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title th:text="${pageTitle}">Admin · SolarUpgrade</title>
+    <title th:text="${pageTitle} + ' · ' + ${brand.name} + ' admin'">Admin</title>
     <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
     <link rel="stylesheet" th:href="@{/css/style.css}">
     <script th:src="@{/js/theme.js}"></script>
@@ -20,7 +20,7 @@
 <header th:fragment="header" class="admin-bar">
     <div class="admin-bar-inner">
         <a class="admin-brand" th:href="@{/admin}">
-            SolarUpgrade <span>admin</span>
+            <span th:text="${brand.name}">Shop</span> <span>admin</span>
         </a>
 
         <nav class="admin-nav">
