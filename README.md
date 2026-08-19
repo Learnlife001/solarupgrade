@@ -851,6 +851,42 @@ the migration, `validate` accepted every column, and a full
 registration-to-checkout flow persisted correctly with exact `NUMERIC`/`DECIMAL`
 money and full timestamp precision.
 
+### H2 accepts SQL that PostgreSQL rejects
+
+Every test runs on H2. Production is PostgreSQL. H2 is the more forgiving of
+the two, so a query can pass the whole suite and still fail on every request
+once deployed — which is exactly what happened to the supplier directory: 193
+green tests, and a page that answered `500` in production. Two separate
+defects, in one query, neither visible in the Java:
+
+| PostgreSQL says | Cause |
+|---|---|
+| `function lower(bytea) does not exist` | A `null` bound inside `lower(?)` has no type to infer, so the driver sends `bytea`. Non-null parameters are typed; nulls are not. |
+| `for SELECT DISTINCT, ORDER BY expressions must appear in select list` | The results were ordered by a `case` expression that is not in the select list, and a join to the categories table had made a `distinct` necessary. |
+
+So there is now a test that runs the search against a real PostgreSQL server —
+`PostgresSupplierSearchTest`, which exercises all 108 combinations of the four
+filters, because the fault was in how a parameter was bound rather than in any
+one clause. It **skips itself unless `TEST_POSTGRES_URL` is set**, so
+`./gradlew build` still works with nothing installed, and CI runs it against a
+`postgres:16` service container on every push. A later step fails the build if
+the report shows those tests were skipped: a test that silently skips is worse
+than no test, because the build stays green and nobody learns the server was
+missing.
+
+To run them locally against any PostgreSQL:
+
+```
+TEST_POSTGRES_URL=jdbc:postgresql://localhost:5432/solarupgrade_test \
+TEST_POSTGRES_USERNAME=postgres TEST_POSTGRES_PASSWORD=postgres \
+./gradlew build
+```
+
+The general rule this leaves behind: **a null parameter inside a SQL function
+needs a type.** Give the parameter a non-null sentinel — an empty string means
+"no text filter" here — or cast it explicitly. Comparing a nullable parameter
+with `=` against a mapped column is fine, because the column supplies the type.
+
 ## Layout
 
 ```

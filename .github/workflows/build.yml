@@ -10,6 +10,27 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    # The suite runs on H2, and H2 accepts SQL that PostgreSQL refuses -- which
+    # is how a directory page that 500s on every request in production passed
+    # 193 green tests. The tests that need a real server skip themselves unless
+    # TEST_POSTGRES_URL is set, so this service is what makes them run at all.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: solarupgrade_test
+        ports:
+          - 5432:5432
+        # Without this the build can start before the server accepts
+        # connections, and the tests skip on a machine that has one.
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v7
 
@@ -24,6 +45,25 @@ jobs:
 
       - name: Build and test
         run: ./gradlew build --no-daemon
+        env:
+          TEST_POSTGRES_URL: jdbc:postgresql://localhost:5432/solarupgrade_test
+          TEST_POSTGRES_USERNAME: postgres
+          TEST_POSTGRES_PASSWORD: postgres
+
+      # A test that silently skips is worse than no test: the build stays green
+      # and nobody learns the server was missing. This fails the run instead.
+      - name: Check the PostgreSQL tests actually ran
+        run: |
+          report=build/test-results/test/TEST-com.shoppingapp.shoppingwebapp.repository.PostgresSupplierSearchTest.xml
+          if [ ! -f "$report" ]; then
+            echo "No PostgreSQL test report at $report -- did the class get renamed?"
+            exit 1
+          fi
+          if grep -q '<skipped' "$report"; then
+            echo "PostgreSQL tests were skipped; the service container was not reachable."
+            exit 1
+          fi
+          echo "PostgreSQL tests ran against the service container."
 
       # Surfaces the failing assertions in the run summary rather than making
       # someone dig through the raw log.

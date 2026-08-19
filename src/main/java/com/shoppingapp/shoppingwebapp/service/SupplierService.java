@@ -30,9 +30,15 @@ public class SupplierService {
         this.suppliers = suppliers;
     }
 
-    /** A blank filter is a null filter: an empty query string means "no filter". */
+    /**
+     * A blank search box means "no text filter".
+     *
+     * <p>It becomes an empty string rather than a null, because the query puts
+     * the term inside {@code lower()} and PostgreSQL cannot type a null there;
+     * see {@link SupplierRepository#search}. The enum filters stay nullable.
+     */
     public List<Supplier> search(Category category, SupplierTrade trade, ExportStance stance, String term) {
-        return suppliers.search(category, trade, stance, blankToNull(term));
+        return suppliers.search(category, trade, stance, term == null ? "" : term.trim());
     }
 
     public List<Supplier> all() {
@@ -79,7 +85,4 @@ public class SupplierService {
         suppliers.delete(get(id));
     }
 
-    private static String blankToNull(String value) {
-        return (value == null || value.isBlank()) ? null : value.trim();
-    }
 }
