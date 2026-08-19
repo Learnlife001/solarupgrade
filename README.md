@@ -227,6 +227,24 @@ restart. Marking only one of them lowest-precedence does not fix it: an
 unordered runner is already treated as lowest, so the two tie and the winner is
 whichever bean was registered first.
 
+### application.properties is read as ISO-8859-1
+
+Java decodes a `.properties` file as ISO-8859-1, whatever the file actually
+is. The brand mark was written there as a literal UTF-8 `☀`, so it was decoded
+as the three separate bytes it is made of, and every page header and every
+customer email showed `Ã¢Ëœâ‚¬` where the sun should be. Nothing failed and no
+test noticed; it just looked broken to everyone who received an email.
+
+It is now written as `\u2600` — plain ASCII, and therefore immune to how the
+file is decoded. **Keep application.properties ASCII-only** and write any
+non-ASCII default as a `\uXXXX` escape; `BrandMarkEncodingTest` fails the
+build if a non-ASCII character is added back.
+
+This is a different problem from the container locale below, which is about
+environment variables rather than the properties file. Both have to be right:
+the escape fixes the default, and `LANG` fixes an override supplied at
+deploy time.
+
 ### The container's locale is UTF-8, deliberately
 
 `LANG` and `LC_ALL` are set in the Dockerfile. The JVM reads environment
@@ -276,6 +294,10 @@ so. They are a solid starting point, not advice.
 
 `/suppliers`, public, no account needed. A searchable list of German solar
 suppliers and, for each one, whether they will actually ship to Nigeria.
+
+Linked from the main navigation beside Shop, not from the footer: it is
+something to read *before* deciding what to buy, and a footer is where links go
+to be ignored. The footer carries the policies only.
 
 **Why a shop lists the people it buys from.** Customers ask "could I just
 import this myself?" whether or not the site acknowledges it. Answering it

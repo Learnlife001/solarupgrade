@@ -34,6 +34,12 @@
 
         <nav class="main-nav">
             <a th:href="@{/products}">Shop</a>
+            <!--
+              Beside Shop rather than down in the footer with the policies. It
+              is something to read before deciding what to buy, and a footer is
+              where links go to be ignored.
+            -->
+            <a th:href="@{/suppliers}">German suppliers</a>
             <a th:href="@{/orders}" sec:authorize="isAuthenticated()">Orders</a>
         </nav>
 
@@ -65,25 +71,46 @@
 </header>
 
 <footer th:fragment="footer" class="site-footer">
-    <!--
-      In the footer of every page because that is where people look for them,
-      and because a returns policy nobody can find is not a policy.
-    -->
-    <nav class="footer-links">
-        <a th:href="@{/suppliers}">German suppliers</a>
-        <a th:href="@{/terms}">Terms of sale</a>
-        <a th:href="@{/returns}">Returns</a>
-        <a th:href="@{/privacy}">Privacy</a>
-        <a th:href="@{/contact}">Contact</a>
-    </nav>
-    <p>
-        <span th:text="${brand.name}">Shop</span> &mdash;
-        <span th:text="${brand.tagline}">tagline</span>
-    </p>
-    <!-- Honest today, a lie the moment somebody loads real stock; hence a setting. -->
-    <p class="note" th:if="${brand.demoNotice}">
-        Demo storefront &mdash; prices and stock are sample data.
-    </p>
+    <div class="footer-inner">
+        <!--
+          The shop identifies itself first, then says where to go. Three
+          centred sentences stacked in the middle read as an apology; a footer
+          should look like the bottom of a shop.
+        -->
+        <div class="footer-brand">
+            <span class="brand">
+                <span class="brand-mark" aria-hidden="true" th:text="${brand.mark}">&#9728;</span>
+                <span th:text="${brand.name}">Shop</span>
+            </span>
+            <p class="footer-tagline" th:text="${brand.tagline}">tagline</p>
+        </div>
+
+        <!--
+          The policies, in the footer of every page because that is where
+          people look for them, and because a returns policy nobody can find is
+          not a policy. Labelled, so it is clear what the column is.
+        -->
+        <nav class="footer-nav" aria-label="Policies">
+            <h2 class="footer-heading">Buying from us</h2>
+            <ul class="footer-links">
+                <li><a th:href="@{/terms}">Terms of sale</a></li>
+                <li><a th:href="@{/returns}">Returns</a></li>
+                <li><a th:href="@{/privacy}">Privacy</a></li>
+                <li><a th:href="@{/contact}">Contact</a></li>
+            </ul>
+        </nav>
+    </div>
+
+    <div class="footer-bottom">
+        <p class="footer-copy">
+            &copy; <span th:text="${#temporals.year(#temporals.createNow())}">2026</span>
+            <span th:text="${brand.name}">Shop</span>
+        </p>
+        <!-- Honest today, a lie the moment somebody loads real stock; hence a setting. -->
+        <p class="footer-note" th:if="${brand.demoNotice}">
+            Demo storefront &mdash; prices and stock are sample data.
+        </p>
+    </div>
 </footer>
 
 </body>
