@@ -254,6 +254,154 @@ class EmailRenderTest {
         // placeOrder already sent one, so this is the second call.
         String html = captureHtml();
         dump("confirmation", html);
-        assertThat(html).contains("Delivering to");
+        assertThat(html).contains("Delivery address");
+    }
+
+    /**
+     * The order number sits at the top, opposite the brand. It is what a
+     * customer searches their inbox for and quotes when they write in.
+     */
+    @Test
+    void theOrderNumberIsInTheHeader() {
+        emailService.sendPaymentReceived(order);
+
+        assertThat(captureHtml()).contains("Order #" + order.getId());
+    }
+
+    /** Never "ORDER #NULL", whatever state the order is in. */
+    @Test
+    void anOrderWithNoIdLosesTheReferenceRatherThanPrintingNull() {
+        Order unsaved = new Order(user, "Adaeze Okafor", "14 Adeola Odeku Street");
+        unsaved.setPaymentMethod(PaymentMethod.PAYPAL);
+
+        emailService.sendOrderConfirmation(unsaved);
+
+        assertThat(captureHtml()).doesNotContainIgnoringCase("#null");
+    }
+
+    /**
+     * The money adds up on the page, not just in the database: a subtotal
+     * counting the actual items, delivery, and the total they come to.
+     */
+    @Test
+    void theReceiptShowsHowTheTotalIsReached() throws Exception {
+        emailService.sendPaymentReceived(order);
+        String html = captureHtml();
+        dump("totals", html);
+
+        assertThat(html)
+                .contains("Subtotal (3 items)")
+                .contains("Delivery")
+                .contains("Included")
+                .contains("Total")
+                .contains(order.getTotalDisplay());
+    }
+
+    /** One item is "1 item", not "1 items". */
+    @Test
+    void theSubtotalCountsInSingularWhenThereIsOneItem() {
+        singleItemReceipt();
+
+        assertThat(captureHtml()).contains("Subtotal (1 item)");
+    }
+
+    private void singleItemReceipt() {
+        Product single = productRepository.save(new Product(
+                "3.6kW Hybrid Inverter", "One inverter.",
+                new BigDecimal("1245000.00"), Category.INVERTER, 4, "/images/inverter-3-6kw.svg"));
+        cartService.add(user, single, 1);
+        CheckoutForm form = new CheckoutForm();
+        form.setShippingName("Adaeze Okafor");
+        form.setShippingLine1("14 Adeola Odeku Street");
+        form.setShippingCity("Victoria Island");
+        form.setShippingState("Lagos");
+        form.setShippingCountry("NG");
+        form.setPaymentMethod(PaymentMethod.PAYPAL);
+        emailService.sendPaymentReceived(orderService.placeOrder(user, form));
+    }
+
+    /**
+     * A customer's own details come back to them: where it is going, and how it
+     * was paid.
+     */
+    @Test
+    void theReceiptCarriesTheCustomersOwnDetailsBack() {
+        emailService.sendPaymentReceived(order);
+        String html = captureHtml();
+
+        assertThat(html)
+                .contains("Customer information")
+                .contains("Delivery address")
+                .contains("14 Adeola Odeku Street")
+                .contains("Payment")
+                .contains("PayPal");
+    }
+
+    /**
+     * Nothing in this application ever sees a card number, so no email can
+     * carry one. The assertion is here because a "card ending 4242" line is
+     * exactly the sort of thing a redesign copies from another shop's email
+     * without noticing it implies we stored it.
+     */
+    /**
+     * A receipt must not say "Paid" at the top and "Pending payment" further
+     * down. The status is stated once, by the pill; the payment block carries
+     * the method only.
+     */
+    @Test
+    void theReceiptDoesNotContradictItselfAboutTheStatus() {
+        emailService.sendPaymentReceived(order);
+
+        assertThat(captureHtml()).doesNotContain("Pending payment");
+    }
+
+    @Test
+    void noEmailShowsCardDetails() {
+        emailService.sendPaymentReceived(order);
+
+        assertThat(captureHtml())
+                .doesNotContainIgnoringCase("ending with")
+                .doesNotContainIgnoringCase("ending in")
+                .doesNotContainIgnoringCase("card number");
+    }
+
+    /** The button, and the quieter way back to the shop beside it. */
+    @Test
+    void theReceiptOffersTheOrderAndTheShop() {
+        emailService.sendPaymentReceived(order);
+        String html = captureHtml();
+
+        assertThat(html)
+                .contains("View your order")
+                .contains("Visit the shop")
+                .contains("https://solarupgrade.onrender.com/products");
+    }
+
+    /**
+     * The delivery estimate is a business setting. It used to be typed into the
+     * dispatch email as well, so changing it in one place left the other
+     * telling customers something else.
+     */
+    @Test
+    void theDispatchNoticeQuotesTheConfiguredDeliveryEstimate() {
+        // Only a paid order can ship, and the service is right to refuse
+        // otherwise -- the first version of this test shipped an unpaid one and
+        // was quietly asserting against the confirmation email instead.
+        orderService.markPaid(order);
+        orderService.markShipped(order.getId());
+
+        assertThat(captureHtml()).contains("5 to 10 working days");
+        assertThat(captureText()).contains("5 to 10 working days");
+    }
+
+    /**
+     * With no support address configured, the footer says to reply rather than
+     * naming an address that does not exist.
+     */
+    @Test
+    void theFooterFallsBackToReplyingWhenNoSupportAddressIsSet() {
+        emailService.sendPaymentReceived(order);
+
+        assertThat(captureHtml()).contains("just reply to this email");
     }
 }

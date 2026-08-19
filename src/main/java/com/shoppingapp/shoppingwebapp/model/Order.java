@@ -305,7 +305,12 @@ public class Order {
                 .filter(part -> part != null && !part.isBlank())
                 .collect(Collectors.joining(" "));
         addIfPresent(lines, cityLine);
-        addIfPresent(lines, shippingState);
+        // Lagos, Lagos. Kano, Kano. Several Nigerian states share their
+        // capital's name, and an address label that says it twice reads as a
+        // mistake in our system rather than as a fact about the country.
+        if (shippingState != null && !shippingState.equalsIgnoreCase(shippingCity)) {
+            addIfPresent(lines, shippingState);
+        }
         addIfPresent(lines, countryName());
         return lines;
     }

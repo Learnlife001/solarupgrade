@@ -54,4 +54,12 @@ tasks.named('test') {
     if (System.getProperty('email.dump.dir')) {
         systemProperty 'email.dump.dir', System.getProperty('email.dump.dir')
     }
+
+    // PostgresSupplierSearchTest enables itself from these, and Gradle does not
+    // treat environment variables as task inputs. Without this, a run that
+    // skipped the PostgreSQL tests because no server was up stays "up to date"
+    // once one is, and the tests silently keep skipping -- exactly the trap the
+    // tests exist to close.
+    inputs.property('testPostgresUrl',
+            providers.environmentVariable('TEST_POSTGRES_URL').orElse(''))
 }

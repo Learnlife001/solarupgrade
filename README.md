@@ -169,6 +169,40 @@ field beside `text`.
 what email is: Outlook renders with Word's engine, Gmail drops much of what is
 in a `<style>` block, and neither supports flexbox or grid.
 
+### What an order email looks like
+
+The same shape as a receipt from any shop that sends good ones, because that
+shape is what customers already know how to read:
+
+| Part | What it carries |
+|---|---|
+| Header | The brand on the left, `ORDER #12` on the right — the number people search their inbox for and quote when they write in |
+| Headline and status pill | What happened, said once |
+| Actions | One button for the thing to do next, and a quieter text link to the shop beside it |
+| Order summary | Each item with its picture, category, description, quantity and line total |
+| Totals | Subtotal, delivery, then the total on its own line, right-aligned under the items |
+| Customer information | Delivery address and payment method, in two columns |
+| Footer | How to reach a human |
+
+Two rules that decide what does *not* appear:
+
+**Only lines that are true of this shop.** No discount row, because nothing
+issues discounts; delivery says "included" because nothing charges for it. An
+invented `Shipping: 0.00` would be a promise the checkout never made. Whoever
+adds either feature adds the row with it.
+
+**No card details, ever.** Nothing in this application sees a card number, a
+last four or an expiry — the payment provider takes those on its own pages. A
+"card ending 4242" line is exactly what a redesign copies from another shop's
+email without noticing it implies we stored one, so a test asserts no email
+contains it.
+
+**The status is stated once.** The pill says whether the order is paid; the
+payment block names the method only. Saying it in both places is how a receipt
+headed "Thank you for your purchase" came to carry the words "Pending payment"
+further down when it was rendered.
+
+
 **Product pictures are PNG, not the site's SVG.** No major email client renders
 SVG — Gmail and Outlook both drop it — so the same drawings are rasterised into
 `static/images/email/` and referenced by absolute URL, the only kind an inbox can

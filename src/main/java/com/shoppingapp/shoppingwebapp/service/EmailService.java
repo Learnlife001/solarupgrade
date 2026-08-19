@@ -1,6 +1,7 @@
 package com.shoppingapp.shoppingwebapp.service;
 
 import com.shoppingapp.shoppingwebapp.config.Brand;
+import com.shoppingapp.shoppingwebapp.config.BusinessDetails;
 import com.shoppingapp.shoppingwebapp.model.Order;
 import com.shoppingapp.shoppingwebapp.model.OrderItem;
 import com.shoppingapp.shoppingwebapp.model.User;
@@ -43,17 +44,20 @@ public class EmailService {
     private final ObjectProvider<ResendMailer> resendProvider;
     private final ObjectProvider<JavaMailSender> mailSenderProvider;
     private final Brand brand;
+    private final BusinessDetails business;
     private final String fromAddress;
     private final String baseUrl;
 
     public EmailService(ObjectProvider<ResendMailer> resendProvider,
                         ObjectProvider<JavaMailSender> mailSenderProvider,
                         Brand brand,
+                        BusinessDetails business,
                         @Value("${app.mail.from:no-reply@example.invalid}") String fromAddress,
                         @Value("${app.base-url:http://localhost:8080}") String baseUrl) {
         this.resendProvider = resendProvider;
         this.mailSenderProvider = mailSenderProvider;
         this.brand = brand;
+        this.business = business;
         this.fromAddress = fromAddress;
         // Links in email must be absolute, and the app cannot infer its own
         // public address from behind a proxy.
@@ -74,8 +78,72 @@ public class EmailService {
 
     /** The HTML shell, already carrying the brand. */
     private String document(String title, String preheader, String body, String footerNote) {
+        return document(title, preheader, null, body, footerNote);
+    }
+
+    /** The shell with the order reference opposite the brand. */
+    private String document(String title, String preheader, String headerNote,
+                            String body, String footerNote) {
         return EmailHtml.document(brand.getName(), brand.getMark(), brand.getTagline(),
-                title, preheader, body, footerNote);
+                title, preheader, headerNote, body, footerNote);
+    }
+
+    /**
+     * "ORDER #12", sat opposite the brand at the top of every order email.
+     *
+     * <p>Null when the order has no id yet, so the header simply loses the
+     * reference rather than announcing "ORDER #NULL" to a customer. Every order
+     * we mail about has been saved, but a header that shouts a Java keyword on
+     * the one path where that stops being true is not worth the risk.
+     */
+    private String orderReference(Order order) {
+        return order.getId() == null ? null : "Order #" + order.getId();
+    }
+
+    /**
+     * How an order is named in a sentence: "order #12", or plain "order" for
+     * one with no id yet.
+     *
+     * <p>Every subject line and title goes through this. Building them by
+     * concatenating {@code getId()} put the literal "#null" in a subject line
+     * the moment an unsaved order reached the mailer -- which a test found by
+     * sending one.
+     */
+    private String orderName(Order order) {
+        return order.getId() == null ? "order" : "order #" + order.getId();
+    }
+
+    /** The same, at the start of a sentence. */
+    private String capitalisedOrderName(Order order) {
+        return order.getId() == null ? "Order" : "Order #" + order.getId();
+    }
+
+    /**
+     * How to reach a human, in the footer of every order email.
+     *
+     * <p>The support address appears only once one is configured. A "contact us
+     * at" line pointing at an address nobody reads is worse than no line at
+     * all, and replying to the message always works.
+     */
+    private String supportLine() {
+        String email = business.getSupportEmail();
+        if (email == null || email.isBlank()) {
+            return "If you have any questions, just reply to this email.";
+        }
+        return "If you have any questions, reply to this email or contact us at "
+                + "<a href=\"mailto:" + escape(email) + "\" style=\"color:" + EmailHtml.ACCENT
+                + ";text-decoration:none;\">" + escape(email) + "</a>.";
+    }
+
+    /**
+     * The customer's own details, carried back to them: where it is going and
+     * how it is being paid. Two columns, the way a receipt is laid out.
+     */
+    private String customerInformation(Order order) {
+        return EmailHtml.sectionHeading("Customer information")
+                + EmailHtml.columns(
+                        "Delivery address", OrderEmailParts.addressLines(order),
+                        "Payment", OrderEmailParts.payment(order));
     }
 
     /**
@@ -84,24 +152,26 @@ public class EmailService {
      */
     public void sendOrderConfirmation(Order order) {
         String html = document(
-                "Your " + shop() + " order #" + order.getId(),
+                "Your " + shop() + " " + orderName(order),
                 "We have your order. Nothing has been charged yet.",
-                EmailHtml.heading("Thanks, " + order.getUser().getFullName())
+                orderReference(order),
+                EmailHtml.heading("Thanks for your order!")
                         + EmailHtml.pill("Awaiting payment", EmailHtml.SUN_SOFT, EmailHtml.SUN_INK)
-                        + EmailHtml.paragraph("We have your order and the items are held for you. "
+                        + EmailHtml.lead("Hi " + escape(order.getUser().getFullName())
+                                + ", we have your order and the items are held for you. "
                                 + "Nothing has been charged yet &mdash; finish paying and we will get it moving.")
-                        + EmailHtml.button("Finish paying", orderUrl(order))
+                        + EmailHtml.actions("Finish paying", orderUrl(order),
+                                "Visit the shop", baseUrl + "/products")
                         + EmailHtml.divider()
-                        + EmailHtml.sectionTitle("Your order #" + order.getId())
+                        + EmailHtml.sectionHeading("Order summary")
                         + OrderEmailParts.itemTable(order, baseUrl, true)
                         + OrderEmailParts.totals(order)
                         + EmailHtml.divider()
-                        + EmailHtml.sectionTitle("Delivering to")
-                        + OrderEmailParts.address(order),
-                "You are receiving this because you placed an order with us.");
+                        + customerInformation(order),
+                supportLine());
 
         send(order.getUser().getEmail(),
-                "Your " + shop() + " order #" + order.getId(),
+                "Your " + shop() + " " + orderName(order),
                 textOrderBody(order, "Thanks for your order. Here is what we have:", true),
                 html,
                 "confirmation for order " + order.getId());
@@ -116,27 +186,28 @@ public class EmailService {
      */
     public void sendPaymentReceived(Order order) {
         String html = document(
-                "Payment received — " + shop() + " order #" + order.getId(),
+                "Payment received — " + shop() + " " + orderName(order),
                 "Payment confirmed. Nothing further is needed from you.",
-                EmailHtml.heading("Payment received")
+                orderReference(order),
+                EmailHtml.heading("Thank you for your purchase!")
                         + EmailHtml.pill("Paid", EmailHtml.ACCENT_SOFT, EmailHtml.ACCENT_INK)
-                        + EmailHtml.paragraph("Hi " + escape(order.getUser().getFullName())
-                                + ", your payment has come through and order #" + order.getId()
-                                + " is confirmed. Nothing further is needed from you &mdash; "
-                                + "we will email again when it ships.")
-                        + EmailHtml.button("View your order", orderUrl(order))
+                        + EmailHtml.lead("Hi " + escape(order.getUser().getFullName())
+                                + ", your payment has come through and we are getting your order ready. "
+                                + "We will email again when it has been sent.")
+                        + EmailHtml.actions("View your order", orderUrl(order),
+                                "Visit the shop", baseUrl + "/products")
                         + EmailHtml.divider()
-                        + EmailHtml.sectionTitle("What you bought")
+                        + EmailHtml.sectionHeading("Order summary")
                         + OrderEmailParts.itemTable(order, baseUrl, true)
                         + OrderEmailParts.totals(order)
                         + EmailHtml.divider()
-                        + EmailHtml.sectionTitle("Delivering to")
-                        + OrderEmailParts.address(order)
+                        + customerInformation(order)
+                        + EmailHtml.divider()
                         + EmailHtml.small("Keep this email as your receipt."),
-                "This is your receipt for order #" + order.getId() + ".");
+                supportLine());
 
         send(order.getUser().getEmail(),
-                "Payment received — " + shop() + " order #" + order.getId(),
+                "Payment received — " + shop() + " " + orderName(order),
                 textOrderBody(order, "Your payment has come through and this order is confirmed.", true)
                         + "\nKeep this as your receipt.\n",
                 html,
@@ -149,25 +220,29 @@ public class EmailService {
      */
     public void sendPaymentReminder(Order order) {
         String html = document(
-                "Finish your " + shop() + " order #" + order.getId(),
+                "Finish your " + shop() + " " + orderName(order),
                 "Your order is still waiting for payment.",
+                orderReference(order),
                 EmailHtml.heading("Still want these?")
                         + EmailHtml.pill("Awaiting payment", EmailHtml.SUN_SOFT, EmailHtml.SUN_INK)
-                        + EmailHtml.paragraph("Hi " + escape(order.getUser().getFullName())
-                                + ", order #" + order.getId() + " is still waiting for payment, "
-                                + "so we have not dispatched it. The items below are held for you.")
-                        + EmailHtml.button("Finish paying", orderUrl(order))
+                        + EmailHtml.lead("Hi " + escape(order.getUser().getFullName())
+                                + ", this order is still waiting for payment, so we have not dispatched it. "
+                                + "The items below are held for you.")
+                        + EmailHtml.actions("Finish paying", orderUrl(order),
+                                "Visit the shop", baseUrl + "/products")
                         + EmailHtml.divider()
-                        + EmailHtml.sectionTitle("Reserved for you")
+                        + EmailHtml.sectionHeading("Reserved for you")
                         + OrderEmailParts.itemTable(order, baseUrl, true)
                         + OrderEmailParts.totals(order)
                         + EmailHtml.divider()
+                        + customerInformation(order)
+                        + EmailHtml.divider()
                         + EmailHtml.small("Changed your mind? Ignore this and the order will lapse on its "
                                 + "own. This is the only reminder we will send."),
-                "You placed this order and it has not been paid for.");
+                supportLine());
 
         send(order.getUser().getEmail(),
-                "Finish your " + shop() + " order #" + order.getId(),
+                "Finish your " + shop() + " " + orderName(order),
                 textOrderBody(order, "This order is still waiting for payment, so we have not dispatched it.", true)
                         + "\nFinish paying: " + orderUrl(order)
                         + "\n\nIf you have changed your mind, ignore this and the order will lapse. "
@@ -182,23 +257,24 @@ public class EmailService {
      */
     public void sendOrderExpired(Order order) {
         String html = document(
-                "Your " + shop() + " order #" + order.getId() + " has lapsed",
+                "Your " + shop() + " " + orderName(order) + " has lapsed",
                 "Nothing was charged. The items are back in stock.",
-                EmailHtml.heading("Order #" + order.getId() + " has lapsed")
+                orderReference(order),
+                EmailHtml.heading("This order has lapsed")
                         + EmailHtml.pill("Cancelled", "#fdecea", "#b3261e")
-                        + EmailHtml.paragraph("Hi " + escape(order.getUser().getFullName())
+                        + EmailHtml.lead("Hi " + escape(order.getUser().getFullName())
                                 + ", this order was never paid for, so we have released it and put the "
                                 + "items back in stock. <strong>Nothing has been charged.</strong>")
-                        + EmailHtml.button("Browse the catalogue", baseUrl + "/products")
+                        + EmailHtml.actions("Browse the catalogue", baseUrl + "/products", null, null)
                         + EmailHtml.divider()
-                        + EmailHtml.sectionTitle("What lapsed")
+                        + EmailHtml.sectionHeading("What lapsed")
                         + OrderEmailParts.itemTable(order, baseUrl, true)
                         + EmailHtml.divider()
                         + EmailHtml.small("Prices and stock may have changed since you ordered."),
-                "You placed this order and it was not paid for.");
+                supportLine());
 
         send(order.getUser().getEmail(),
-                "Your " + shop() + " order #" + order.getId() + " has lapsed",
+                "Your " + shop() + " " + orderName(order) + " has lapsed",
                 textOrderBody(order, "This order was never paid for, so we have released it and put the "
                                 + "items back in stock. Nothing has been charged.", true)
                         + "\nStill want them? " + baseUrl + "/products\n",
@@ -215,38 +291,41 @@ public class EmailService {
      */
     public void sendOrderShipped(Order order) {
         String html = document(
-                "On its way — " + shop() + " order #" + order.getId(),
-                "Order #" + order.getId() + " has been dispatched.",
-                EmailHtml.heading("On its way")
+                "On its way — " + shop() + " " + orderName(order),
+                capitalisedOrderName(order) + " has been dispatched.",
+                orderReference(order),
+                EmailHtml.heading("Your order is on its way!")
                         + EmailHtml.pill("Shipped", EmailHtml.ACCENT_SOFT, EmailHtml.ACCENT_INK)
-                        + EmailHtml.paragraph("Hi " + escape(order.getUser().getFullName())
-                                + ", order #" + order.getId()
-                                + " has been dispatched. Delivery is usually 5 to 10 working days.")
-                        + EmailHtml.button("Track your order", orderUrl(order))
+                        + EmailHtml.lead("Hi " + escape(order.getUser().getFullName())
+                                + ", this order has been dispatched. Delivery is usually "
+                                + escape(business.getDeliveryEstimate()) + ".")
+                        + EmailHtml.actions("View your order", orderUrl(order),
+                                "Visit the shop", baseUrl + "/products")
                         + EmailHtml.divider()
-                        + EmailHtml.sectionTitle("On its way")
+                        + EmailHtml.sectionHeading("What was sent")
                         + OrderEmailParts.itemTable(order, baseUrl, false)
                         + EmailHtml.divider()
-                        + EmailHtml.sectionTitle("Delivering to")
-                        + OrderEmailParts.address(order)
+                        + customerInformation(order)
+                        + EmailHtml.divider()
                         + EmailHtml.small("Reply to this email if anything is wrong with the delivery details."),
-                "Order #" + order.getId() + " has been dispatched.");
+                supportLine());
 
         StringBuilder text = new StringBuilder();
         text.append("Hi ").append(order.getUser().getFullName()).append(",\n\n")
-                .append("Order #").append(order.getId())
+                .append(capitalisedOrderName(order))
                 .append(" has been dispatched and is on its way to you.\n\nOn its way:\n\n");
         for (OrderItem item : order.getItems()) {
             text.append("  ").append(item.getQuantity()).append(" x ")
                     .append(item.getProductName()).append('\n');
         }
         text.append('\n').append(textAddress(order))
-                .append("\nDelivery is usually 5 to 10 working days nationwide.\n")
+                .append("\nDelivery is usually ").append(business.getDeliveryEstimate())
+                .append(" nationwide.\n")
                 .append("Your order: ").append(orderUrl(order))
                 .append("\n\nReply to this email if anything is wrong with the delivery details.\n");
 
         send(order.getUser().getEmail(),
-                "On its way — " + shop() + " order #" + order.getId(),
+                "On its way — " + shop() + " " + orderName(order),
                 text.toString(),
                 html,
                 "dispatch notice for order " + order.getId());

@@ -116,26 +116,79 @@ public final class OrderEmailParts {
                 + rows + "</table>";
     }
 
-    /** Total, and the converted charge where one was made. */
+    /**
+     * The money, right-aligned under the items.
+     *
+     * <p>Only lines that are true of this shop. There is no discount row
+     * because nothing here issues discounts, and delivery says "included"
+     * because nothing here charges for it -- an invented "Shipping: 0" line
+     * would be a promise the checkout never made. Whoever adds either feature
+     * adds the row with it.
+     */
     public static String totals(Order order) {
         String font = EmailHtml.fontStack();
+        int items = order.getItems().stream().mapToInt(OrderItem::getQuantity).sum();
+
         StringBuilder html = new StringBuilder();
         html.append("<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">")
-                .append("<tr>")
-                .append("<td style=\"padding:14px 0 0;font:700 16px/1.4 ").append(font)
-                .append(";color:").append(EmailHtml.INK).append(";\">Total</td>")
-                .append("<td align=\"right\" style=\"padding:14px 0 0;font:700 16px/1.4 ").append(font)
-                .append(";color:").append(EmailHtml.INK).append(";\">")
-                .append(escape(order.getTotalDisplay())).append("</td>")
-                .append("</tr>");
+                .append("<tr><td width=\"50%\"></td><td>")
+                .append("<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">");
+
+        html.append(row(font, items == 1 ? "Subtotal (1 item)" : "Subtotal (" + items + " items)",
+                escape(order.getTotalDisplay()), false));
+        html.append(row(font, "Delivery", "Included", false));
+
+        html.append("<tr><td colspan=\"2\" style=\"padding:10px 0 0;\">")
+                .append("<div style=\"height:1px;background:").append(EmailHtml.LINE).append(";\"></div>")
+                .append("</td></tr>");
+
+        html.append(row(font, "Total", escape(order.getTotalDisplay()), true));
+
+        html.append("</table></td></tr>");
+
         if (order.isConverted()) {
-            html.append("<tr><td colspan=\"2\" style=\"padding:6px 0 0;font:400 13px/1.5 ").append(font)
-                    .append(";color:").append(EmailHtml.INK_2).append(";\">")
+            html.append("<tr><td colspan=\"2\" align=\"right\" style=\"padding:8px 0 0;font:400 13px/1.5 ")
+                    .append(font).append(";color:").append(EmailHtml.INK_2).append(";\">")
                     .append("Charged through PayPal as ").append(escape(order.getChargeDisplay()))
                     .append(", converted at ").append(escape(order.getExchangeRateDisplay()))
                     .append(" to &euro;1.</td></tr>");
         }
         return html.append("</table>").toString();
+    }
+
+    /** One label-and-figure line; the last one is the one that matters, so it is bigger. */
+    private static String row(String font, String label, String value, boolean emphasis) {
+        String labelStyle = emphasis
+                ? "padding:10px 0 0;font:700 17px/1.4 " + font + ";color:" + EmailHtml.INK + ";"
+                : "padding:5px 0;font:400 14px/1.5 " + font + ";color:" + EmailHtml.INK_2 + ";";
+        String valueStyle = emphasis
+                ? "padding:10px 0 0;font:700 17px/1.4 " + font + ";color:" + EmailHtml.INK + ";white-space:nowrap;"
+                : "padding:5px 0;font:400 14px/1.5 " + font + ";color:" + EmailHtml.INK + ";white-space:nowrap;";
+        return "<tr><td style=\"" + labelStyle + "\">" + escape(label) + "</td>"
+                + "<td align=\"right\" style=\"" + valueStyle + "\">" + value + "</td></tr>";
+    }
+
+    /**
+     * How the order is being paid, and where it stands.
+     *
+     * <p>Never any card detail: nothing in this application sees a card number,
+     * a last four or an expiry, because the payment provider takes them on its
+     * own pages. An email that showed them would mean we had stored them.
+     *
+     * <p>No status either. The pill at the top of the message already says
+     * whether the order is paid, and stating it twice from two places is how a
+     * receipt headed "Thank you for your purchase" came to carry the words
+     * "Pending payment" further down when it was rendered. One statement,
+     * one source.
+     */
+    public static String payment(Order order) {
+        StringBuilder html = new StringBuilder();
+        html.append("<strong style=\"color:").append(EmailHtml.INK).append(";\">")
+                .append(escape(order.getPaymentMethod().getDisplayName())).append("</strong>");
+        if (order.isConverted()) {
+            html.append("<br>").append(escape(order.getChargeDisplay()));
+        }
+        return html.toString();
     }
 
     /** The delivery label, laid out the way it would be written on a parcel. */
@@ -151,5 +204,16 @@ public final class OrderEmailParts {
                 + "<tr><td style=\"background:" + EmailHtml.SURFACE_2 + ";border-radius:10px;padding:16px 18px;"
                 + "font:400 14px/1.7 " + font + ";color:" + EmailHtml.INK_2 + ";\">"
                 + lines + "</td></tr></table>";
+    }
+
+    /** The same address with no box around it, for use inside a column. */
+    public static String addressLines(Order order) {
+        StringBuilder lines = new StringBuilder();
+        lines.append("<strong style=\"color:").append(EmailHtml.INK).append(";\">")
+                .append(escape(order.getShippingName())).append("</strong><br>");
+        for (String line : order.getShippingLines()) {
+            lines.append(escape(line)).append("<br>");
+        }
+        return lines.toString();
     }
 }
