@@ -1,5 +1,6 @@
 package com.shoppingapp.shoppingwebapp.controller;
 
+import com.shoppingapp.shoppingwebapp.model.CancellationReason;
 import com.shoppingapp.shoppingwebapp.model.Order;
 import com.shoppingapp.shoppingwebapp.model.User;
 import com.shoppingapp.shoppingwebapp.service.OrderService;
@@ -107,5 +108,35 @@ public class OrderController {
                     "We could not reach PayPal just now. Nothing has been charged — please try again.");
             return "redirect:/orders/" + id;
         }
+    }
+
+    /**
+     * The customer changing their mind.
+     *
+     * <p>Until now the only thing they could do with an order was pay for it:
+     * somebody who decided against it had to wait three days for the expiry job
+     * or write in and ask. Their items stayed off the shelf the whole time,
+     * which costs the shop as well as annoying them.
+     *
+     * <p>Scoped to the signed-in customer, and the service refuses anything
+     * that is not still awaiting payment -- so this cannot touch a paid order,
+     * whatever is posted. Money that has moved needs a refund, which is an
+     * admin decision rather than a button.
+     */
+    @PostMapping("/{id}/cancel")
+    public String cancel(@PathVariable Long id, Principal principal, RedirectAttributes flash) {
+        User user = currentUser.require(principal);
+        Order order = orderService.getForUser(id, user);
+
+        if (orderService.cancelUnpaid(order.getId(), CancellationReason.CUSTOMER)) {
+            flash.addFlashAttribute("message",
+                    "Order cancelled. Nothing has been charged and the items are back in the shop.");
+        } else {
+            // Paid or already cancelled between the page loading and the click.
+            flash.addFlashAttribute("error",
+                    "That order is no longer awaiting payment, so it cannot be cancelled here. "
+                            + "Please contact us if something is wrong with it.");
+        }
+        return "redirect:/orders/" + id;
     }
 }

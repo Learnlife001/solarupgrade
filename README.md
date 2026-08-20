@@ -359,6 +359,24 @@ it at all, would each have been worse than a nullable column.
 The file holds personal data — names, addresses, email addresses. Wherever it
 is put is now somewhere customer data lives, and it should be treated that way.
 
+## Changing your mind
+
+Until recently the only thing a customer could do with an order was pay for it.
+Somebody who decided against one had to wait three days for the expiry job or
+write in and ask — with their items off the shelf the whole time, which costs
+the shop as much as it annoys them.
+
+`POST /orders/{id}/cancel` releases an unpaid order, scoped to the signed-in
+customer. It goes through the same `cancelUnpaid` the expiry job uses, so the
+stock comes back under the same row lock, and the same guard applies: an order
+that is not awaiting payment is refused whatever is posted. Money that has
+moved needs a refund, which is a decision rather than a button.
+
+**The confirmation is a different email from the expiry notice.** The mechanics
+are identical, but "this order was never paid for, so we have released it" sent
+to somebody who pressed Cancel a minute earlier reads as though nobody was
+listening. `CancellationReason` decides which goes out.
+
 ## Finding an order
 
 `/admin/orders` searches by order number, the customer's email address, or the

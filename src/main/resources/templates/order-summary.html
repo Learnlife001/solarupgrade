@@ -119,6 +119,20 @@
             Nothing has been charged and your order is held. Place it again
             choosing PayPal, or contact us and we will arrange payment.
         </p>
+
+        <!--
+          Changing your mind, without waiting three days for the expiry job or
+          writing in to ask. Quieter than the pay button on purpose: it is the
+          other option, not the competing one. Only ever shown while the order
+          is still awaiting payment; the server checks the same thing rather
+          than trusting the page.
+        -->
+        <form th:action="@{/orders/{id}/cancel(id=${order.id})}" method="post" class="cancel-form">
+            <button type="submit" class="link-button">Cancel this order</button>
+            <span class="note">
+                Nothing has been charged, and the items go back in the shop.
+            </span>
+        </form>
     </div>
 
     <p class="mt-lg"><a th:href="@{/orders}">&larr; All orders</a></p>

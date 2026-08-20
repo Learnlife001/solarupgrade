@@ -1074,6 +1074,17 @@ input[type="number"].qty-input { width: 4.6rem; margin-top: 0; }
 }
 
 /* Wide tables scroll inside their own box rather than the page. */
+/* The other option beside the pay button, not a competing one. */
+.cancel-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: .5rem 1rem;
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--line);
+}
+
 /* The order search, sat under the status filter row. */
 .admin-search {
     display: flex;

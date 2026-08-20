@@ -283,6 +283,43 @@ public class EmailService {
     }
 
     /**
+     * Confirms a cancellation the customer asked for.
+     *
+     * <p>Separate from the expiry notice on purpose. That one explains why we
+     * ended something they did not ask us to end; this one confirms something
+     * they did. Sending "this order was never paid for, so we have released it"
+     * to somebody who pressed Cancel a minute earlier reads as though the shop
+     * was not listening.
+     */
+    public void sendOrderCancelledByCustomer(Order order) {
+        String html = document(
+                "Your " + shop() + " " + orderName(order) + " is cancelled",
+                "Cancelled as you asked. Nothing has been charged.",
+                orderReference(order),
+                EmailHtml.heading("Your order is cancelled")
+                        + EmailHtml.pill("Cancelled", "#fdecea", "#b3261e")
+                        + EmailHtml.lead("Hi " + escape(order.getUser().getFullName())
+                                + ", this order is cancelled as you asked and the items are back "
+                                + "in the shop. <strong>Nothing has been charged.</strong>")
+                        + EmailHtml.actions("Browse the catalogue", baseUrl + "/products", null, null)
+                        + EmailHtml.divider()
+                        + EmailHtml.sectionHeading("What was cancelled")
+                        + OrderEmailParts.itemTable(order, baseUrl, true)
+                        + EmailHtml.divider()
+                        + EmailHtml.small("Ordered by mistake, or changed your mind again? "
+                                + "The items are back on the shelf and can be ordered afresh."),
+                supportLine());
+
+        send(order.getUser().getEmail(),
+                "Your " + shop() + " " + orderName(order) + " is cancelled",
+                textOrderBody(order, "This order is cancelled as you asked, and the items are back "
+                                + "in the shop. Nothing has been charged.", true)
+                        + "\nBrowse the catalogue: " + baseUrl + "/products\n",
+                html,
+                "cancellation confirmation for order " + order.getId());
+    }
+
+    /**
      * Tells a customer their order is on its way.
      *
      * <p>Prices are left off. The money is settled by this point, and putting

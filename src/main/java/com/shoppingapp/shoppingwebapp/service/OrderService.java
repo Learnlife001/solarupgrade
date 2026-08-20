@@ -2,6 +2,7 @@ package com.shoppingapp.shoppingwebapp.service;
 
 import com.shoppingapp.shoppingwebapp.dto.CheckoutForm;
 import com.shoppingapp.shoppingwebapp.model.CartItem;
+import com.shoppingapp.shoppingwebapp.model.CancellationReason;
 import com.shoppingapp.shoppingwebapp.model.Order;
 import com.shoppingapp.shoppingwebapp.model.OrderItem;
 import com.shoppingapp.shoppingwebapp.model.OrderStatus;
@@ -143,6 +144,15 @@ public class OrderService {
      */
     @Transactional
     public boolean cancelUnpaid(Long orderId) {
+        return cancelUnpaid(orderId, CancellationReason.EXPIRED);
+    }
+
+    /**
+     * The same cancellation, with the reason that decides what the customer is
+     * told. The mechanics do not vary; the message does.
+     */
+    @Transactional
+    public boolean cancelUnpaid(Long orderId, CancellationReason reason) {
         Order order = getAnyOrder(orderId);
         if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
             return false;
@@ -170,8 +180,14 @@ public class OrderService {
         order.setStatus(OrderStatus.CANCELLED);
         Order saved = orderRepository.save(order);
         // Told either way -- an order that vanishes without a word is worse
-        // whether a job released it or a person did.
-        emailService.sendOrderExpired(saved);
+        // whether a job released it or a person did. A customer who asked for
+        // this gets a receipt for what they did rather than a notice that they
+        // failed to pay.
+        if (reason == CancellationReason.CUSTOMER) {
+            emailService.sendOrderCancelledByCustomer(saved);
+        } else {
+            emailService.sendOrderExpired(saved);
+        }
         return true;
     }
 

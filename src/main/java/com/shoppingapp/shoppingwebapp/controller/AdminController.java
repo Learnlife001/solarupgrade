@@ -1,6 +1,7 @@
 package com.shoppingapp.shoppingwebapp.controller;
 
 import com.shoppingapp.shoppingwebapp.model.AdminActionType;
+import com.shoppingapp.shoppingwebapp.model.CancellationReason;
 import com.shoppingapp.shoppingwebapp.model.Order;
 import com.shoppingapp.shoppingwebapp.model.OrderStatus;
 import com.shoppingapp.shoppingwebapp.service.AuditService;
@@ -259,7 +260,7 @@ public class AdminController {
     @PostMapping("/orders/{id}/cancel")
     public String cancel(@PathVariable Long id, Principal principal, RedirectAttributes flash) {
         Order order = orderService.getAnyOrder(id);
-        if (orderService.cancelUnpaid(id)) {
+        if (orderService.cancelUnpaid(id, CancellationReason.ADMIN)) {
             log.info("Order {} cancelled by {}", id, Redact.email(principal.getName()));
             auditService.record(principal.getName(), AdminActionType.ORDER_CANCELLED,
                     AuditService.ORDER, id,
