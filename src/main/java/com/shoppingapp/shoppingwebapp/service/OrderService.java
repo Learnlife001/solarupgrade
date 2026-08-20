@@ -171,6 +171,63 @@ public class OrderService {
     }
 
     /**
+     * Records that a refund went through, and tells the customer.
+     *
+     * <p>Called by {@code PaymentService} only after the provider has confirmed
+     * the money went back. Nothing here contacts a provider: this is the
+     * bookkeeping that follows, welded to the email so a refund cannot be
+     * recorded silently.
+     *
+     * <p><b>Stock comes back only if it never left.</b> A refund before dispatch
+     * returns the units to the shelf, because they are still on it. A refund
+     * after dispatch does not, because the goods are with the customer and
+     * inventing them back into stock would sell something twice -- and the
+     * second buyer would be the one to discover it. When the parcel returns,
+     * the stock figure is set by hand from the admin catalogue, which is a
+     * count of a real shelf.
+     */
+    @Transactional
+    public Order markRefunded(Order order, String reference) {
+        if (order.getStatus() == OrderStatus.REFUNDED) {
+            return order;
+        }
+
+        boolean shipped = order.getStatus() == OrderStatus.SHIPPED;
+        if (!shipped) {
+            returnStock(order);
+        }
+
+        order.markRefunded(reference);
+        Order saved = orderRepository.save(order);
+        emailService.sendOrderRefunded(saved);
+        return saved;
+    }
+
+    /**
+     * Puts an order's units back on the shelf, under the same lock and in the
+     * same order as checkout takes them off it. Returning stock is a
+     * read-modify-write too, and it races with the buying of it.
+     */
+    private void returnStock(Order order) {
+        order.getItems().stream()
+                .map(OrderItem::getProduct)
+                .filter(Objects::nonNull)
+                .sorted(Comparator.comparing(Product::getId))
+                .forEach(product -> entityManager.refresh(product, LockModeType.PESSIMISTIC_WRITE));
+
+        for (OrderItem item : order.getItems()) {
+            Product product = item.getProduct();
+            // Null when the product row was deleted after the order was placed.
+            // The order still shows what was bought, from its own snapshot;
+            // there is simply nowhere to return the stock to.
+            if (product != null) {
+                product.setStock(product.getStock() + item.getQuantity());
+                productRepository.save(product);
+            }
+        }
+    }
+
+    /**
      * Marks a paid order as dispatched and tells the customer.
      *
      * <p>Only from PAID. Shipping an order nobody paid for is the mistake this

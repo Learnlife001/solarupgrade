@@ -1146,6 +1146,9 @@ input[type="number"].qty-input { width: 4.6rem; margin-top: 0; }
 .status-shipped { background: var(--sun-soft); color: var(--sun-ink); }
 .status-pending_payment { background: var(--warn-soft); color: var(--warn); }
 .status-cancelled { background: var(--danger-soft); color: var(--danger); }
+/* Refunded is not cancelled and should not read as a failure: money moved,
+   then moved back, and both were meant to happen. */
+.status-refunded { background: var(--surface-2); color: var(--ink-2); }
 
 .admin-columns {
     display: grid;

@@ -121,7 +121,7 @@ class PaymentServiceTest {
         order.setProviderReference("PP-2");
         orderRepository.save(order);
         when(payPal.capture("PP-2")).thenReturn(new PayPalClient.Capture(
-                true, "COMPLETED", order.getPaymentAmount(), "EUR"));
+                true, "COMPLETED", "CAPTURE-1", order.getPaymentAmount(), "EUR"));
 
         assertThat(paymentService.complete(order)).isTrue();
         assertThat(reload(order.getId()).getStatus()).isEqualTo(OrderStatus.PAID);
@@ -133,7 +133,7 @@ class PaymentServiceTest {
         order.setProviderReference("PP-3");
         orderRepository.save(order);
         when(payPal.capture("PP-3")).thenReturn(new PayPalClient.Capture(
-                false, "DECLINED", null, null));
+                false, "DECLINED", "CAPTURE-1", null, null));
 
         assertThat(paymentService.complete(order)).isFalse();
         assertThat(reload(order.getId()).getStatus()).isEqualTo(OrderStatus.PENDING_PAYMENT);
@@ -149,7 +149,7 @@ class PaymentServiceTest {
         order.setProviderReference("PP-4");
         orderRepository.save(order);
         when(payPal.capture("PP-4")).thenReturn(new PayPalClient.Capture(
-                true, "COMPLETED", new BigDecimal("1.00"), "EUR"));
+                true, "COMPLETED", "CAPTURE-1", new BigDecimal("1.00"), "EUR"));
 
         assertThatThrownBy(() -> paymentService.complete(order))
                 .isInstanceOf(PaymentException.class);
@@ -162,7 +162,7 @@ class PaymentServiceTest {
         order.setProviderReference("PP-5");
         orderRepository.save(order);
         when(payPal.capture("PP-5")).thenReturn(new PayPalClient.Capture(
-                true, "COMPLETED", order.getPaymentAmount(), "USD"));
+                true, "COMPLETED", "CAPTURE-1", order.getPaymentAmount(), "USD"));
 
         assertThatThrownBy(() -> paymentService.complete(order))
                 .isInstanceOf(PaymentException.class);
@@ -187,7 +187,7 @@ class PaymentServiceTest {
         order.setProviderReference("PP-7");
         orderRepository.save(order);
 
-        paymentService.settleFromWebhook(order.getId(), "PP-7", order.getPaymentAmount(), "EUR");
+        paymentService.settleFromWebhook(order.getId(), "PP-7", "CAPTURE-1", order.getPaymentAmount(), "EUR");
 
         assertThat(reload(order.getId()).getStatus()).isEqualTo(OrderStatus.PAID);
     }
@@ -199,8 +199,8 @@ class PaymentServiceTest {
         order.setProviderReference("PP-8");
         orderRepository.save(order);
 
-        paymentService.settleFromWebhook(order.getId(), "PP-8", order.getPaymentAmount(), "EUR");
-        paymentService.settleFromWebhook(order.getId(), "PP-8", order.getPaymentAmount(), "EUR");
+        paymentService.settleFromWebhook(order.getId(), "PP-8", "CAPTURE-1", order.getPaymentAmount(), "EUR");
+        paymentService.settleFromWebhook(order.getId(), "PP-8", "CAPTURE-1", order.getPaymentAmount(), "EUR");
 
         assertThat(reload(order.getId()).getStatus()).isEqualTo(OrderStatus.PAID);
     }
@@ -215,7 +215,7 @@ class PaymentServiceTest {
         order.setProviderReference("PP-9");
         orderRepository.save(order);
 
-        paymentService.settleFromWebhook(order.getId(), "SOMEONE-ELSE", order.getPaymentAmount(), "EUR");
+        paymentService.settleFromWebhook(order.getId(), "SOMEONE-ELSE", "CAPTURE-1", order.getPaymentAmount(), "EUR");
 
         assertThat(reload(order.getId()).getStatus()).isEqualTo(OrderStatus.PENDING_PAYMENT);
     }
@@ -226,14 +226,14 @@ class PaymentServiceTest {
         order.setProviderReference("PP-10");
         orderRepository.save(order);
 
-        paymentService.settleFromWebhook(order.getId(), "PP-10", new BigDecimal("0.01"), "EUR");
+        paymentService.settleFromWebhook(order.getId(), "PP-10", "CAPTURE-1", new BigDecimal("0.01"), "EUR");
 
         assertThat(reload(order.getId()).getStatus()).isEqualTo(OrderStatus.PENDING_PAYMENT);
     }
 
     @Test
     void aWebhookForAnUnknownOrderIsIgnoredRatherThanThrowing() {
-        paymentService.settleFromWebhook(999_999L, "PP-X", new BigDecimal("1.00"), "EUR");
+        paymentService.settleFromWebhook(999_999L, "PP-X", "CAPTURE-1", new BigDecimal("1.00"), "EUR");
     }
 
     /**
@@ -247,11 +247,11 @@ class PaymentServiceTest {
         order.setProviderReference("PP-11");
         orderRepository.save(order);
         when(payPal.capture("PP-11")).thenReturn(new PayPalClient.Capture(
-                true, "COMPLETED", order.getPaymentAmount(), "EUR"));
+                true, "COMPLETED", "CAPTURE-1", order.getPaymentAmount(), "EUR"));
 
         paymentService.complete(order);
         // Then the webhook arrives for the same payment, as it will.
-        paymentService.settleFromWebhook(order.getId(), "PP-11", order.getPaymentAmount(), "EUR");
+        paymentService.settleFromWebhook(order.getId(), "PP-11", "CAPTURE-1", order.getPaymentAmount(), "EUR");
 
         verify(emailService, times(1)).sendPaymentReceived(any(Order.class));
     }
@@ -262,7 +262,7 @@ class PaymentServiceTest {
         order.setProviderReference("PP-12");
         orderRepository.save(order);
         when(payPal.capture("PP-12")).thenReturn(new PayPalClient.Capture(
-                false, "DECLINED", null, null));
+                false, "DECLINED", "CAPTURE-1", null, null));
 
         paymentService.complete(order);
 
@@ -276,7 +276,7 @@ class PaymentServiceTest {
         orderRepository.save(order);
 
         // The buyer paid and closed the tab, so only the webhook reports it.
-        paymentService.settleFromWebhook(order.getId(), "PP-13", order.getPaymentAmount(), "EUR");
+        paymentService.settleFromWebhook(order.getId(), "PP-13", "CAPTURE-1", order.getPaymentAmount(), "EUR");
 
         verify(emailService, times(1)).sendPaymentReceived(any(Order.class));
     }

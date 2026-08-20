@@ -78,12 +78,51 @@
                 <span class="note">Nothing was charged; the items go back on the shelf.</span>
             </form>
 
-            <p class="note mt-md" th:if="${order.status.name() == 'SHIPPED'}">
-                Dispatched. There is nothing further to do here — this app has no
-                returns or refunds path yet.
+            <!--
+              Refunding is deliberately not a single button. It moves money
+              outward and cannot be undone from here, so it asks for a reason
+              first -- which is also what the audit trail needs from it.
+            -->
+            <details class="mt-md" th:if="${canRefund}">
+                <summary>Refund this order</summary>
+                <form th:action="@{/admin/orders/{id}/refund(id=${order.id})}" method="post"
+                      class="mt-md">
+                    <label>
+                        Why is this being refunded?
+                        <input type="text" name="reason" required
+                               placeholder="Customer changed their mind; item out of stock">
+                    </label>
+                    <button type="submit" class="button-secondary button-block">
+                        Refund <span th:text="${order.totalDisplay}">total</span>
+                    </button>
+                    <span class="note" th:if="${order.status.name() == 'PAID'}">
+                        Sends the money back in full and returns the stock to the shelf.
+                        The customer is emailed.
+                    </span>
+                    <span class="note" th:if="${order.status.name() == 'SHIPPED'}">
+                        This order has been dispatched. The money goes back in full, but the
+                        stock does not — the goods are with the customer. Set the stock by
+                        hand when they come back.
+                    </span>
+                </form>
+            </details>
+
+            <p class="note mt-md"
+               th:if="${order.status.name() == 'SHIPPED' and !canRefund}">
+                Dispatched. This order cannot be refunded from here — either no
+                capture was recorded for it, or its payment provider does not
+                support refunds. It can still be refunded in the provider's own
+                dashboard.
             </p>
             <p class="note mt-md" th:if="${order.status.name() == 'CANCELLED'}">
                 Cancelled, and its stock was returned.
+            </p>
+            <p class="note mt-md" th:if="${order.status.name() == 'REFUNDED'}">
+                Refunded on
+                <span th:text="${#temporals.format(order.refundedAt, 'd MMM yyyy')}">date</span>.
+                <span th:if="${order.refundReference != null}">
+                    Provider reference <span th:text="${order.refundReference}">ref</span>.
+                </span>
             </p>
         </section>
     </div>

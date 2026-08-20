@@ -74,6 +74,7 @@ class PluggableProviderTest {
         @Override
         public CaptureResult capture(Order order) {
             return new CaptureResult(captureSucceeds, captureSucceeds ? "COMPLETED" : "DECLINED",
+                    "FAKE-CAPTURE-" + order.getId(),
                     order.getPaymentAmount(), order.getPaymentCurrency());
         }
 

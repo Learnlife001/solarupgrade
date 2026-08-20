@@ -26,7 +26,7 @@
         <dt>Status</dt>
         <dd>
             <span class="status-pill"
-                  th:classappend="${order.status.name() == 'PAID'} ? 'paid'"
+                  th:classappend="'status-' + ${order.status.name().toLowerCase()}"
                   th:text="${order.status.displayName}">status</span>
         </dd>
         <dt th:if="${order.paymentMethod != null}">Paying by</dt>

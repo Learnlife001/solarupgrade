@@ -332,6 +332,47 @@ public class EmailService {
     }
 
     /**
+     * Tells a customer their money has gone back.
+     *
+     * <p>The one thing this email has to be unambiguous about is that the
+     * refund is done and how long the money takes to appear, because the gap
+     * between a provider confirming a refund and a bank showing it is days --
+     * and a customer who is not told that reads the silence as the refund not
+     * having happened.
+     */
+    public void sendOrderRefunded(Order order) {
+        String html = document(
+                "Refunded — " + shop() + " " + orderName(order),
+                "Your money is on its way back.",
+                orderReference(order),
+                EmailHtml.heading("Your refund is on its way")
+                        + EmailHtml.pill("Refunded", EmailHtml.ACCENT_SOFT, EmailHtml.ACCENT_INK)
+                        + EmailHtml.lead("Hi " + escape(order.getUser().getFullName())
+                                + ", we have refunded this order in full. "
+                                + "Banks usually take a few working days to show it, "
+                                + "so it may not appear straight away.")
+                        + EmailHtml.actions("View your order", orderUrl(order),
+                                "Visit the shop", baseUrl + "/products")
+                        + EmailHtml.divider()
+                        + EmailHtml.sectionHeading("What was refunded")
+                        + OrderEmailParts.itemTable(order, baseUrl, true)
+                        + OrderEmailParts.totals(order)
+                        + EmailHtml.divider()
+                        + EmailHtml.small("If it has not arrived within five working days, "
+                                + "reply to this email and we will chase it."),
+                supportLine());
+
+        send(order.getUser().getEmail(),
+                "Refunded — " + shop() + " " + orderName(order),
+                textOrderBody(order, "We have refunded this order in full. Banks usually take a "
+                                + "few working days to show it, so it may not appear straight away.", true)
+                        + "\nIf it has not arrived within five working days, reply to this email "
+                        + "and we will chase it.\n",
+                html,
+                "refund notice for order " + order.getId());
+    }
+
+    /**
      * Sends the code that turns a new registration into a usable account.
      *
      * <p>Best-effort like the rest: a send failure leaves the account

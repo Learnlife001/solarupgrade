@@ -145,7 +145,8 @@ public class PaymentController {
         }
 
         provider.readWebhook(rawBody).ifPresent(event -> paymentService.settleFromWebhook(
-                event.orderId(), event.reference(), event.amount(), event.currency()));
+                event.orderId(), event.reference(), event.captureReference(),
+                event.amount(), event.currency()));
         return ResponseEntity.ok("ok");
     }
 

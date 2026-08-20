@@ -78,8 +78,28 @@ public class PayPalProvider implements PaymentProvider {
     @Override
     public CaptureResult capture(Order order) {
         PayPalClient.Capture capture = require().capture(order.getProviderReference());
-        return new CaptureResult(capture.completed(), capture.status(),
+        return new CaptureResult(capture.completed(), capture.status(), capture.id(),
                 capture.amount(), capture.currency());
+    }
+
+    @Override
+    public boolean canRefund() {
+        return isConfigured();
+    }
+
+    @Override
+    public RefundResult refund(Order order) {
+        String captureId = order.getCaptureReference();
+        if (captureId == null || captureId.isBlank()) {
+            // Orders paid before the capture id was recorded, and any paid
+            // through a route that did not carry one. Saying so is better than
+            // a call that fails at PayPal with something less clear.
+            throw new PaymentException("Order " + order.getId()
+                    + " has no PayPal capture recorded, so it can only be refunded in PayPal itself");
+        }
+        PayPalClient.Refund refund = require().refund(captureId);
+        return new RefundResult(refund.completed(), refund.status(), refund.id(),
+                refund.amount(), refund.currency());
     }
 
     @Override
@@ -117,6 +137,11 @@ public class PayPalProvider implements PaymentProvider {
             return Optional.of(new PaymentEvent(
                     orderId,
                     resource.path("supplementary_data").path("related_ids").path("order_id").asText(null),
+                    // The resource of a PAYMENT.CAPTURE.COMPLETED event is the
+                    // capture, so its own id is what a refund is made against.
+                    // Carried so an order settled by webhook is as refundable
+                    // as one settled on the buyer's return.
+                    resource.path("id").asText(null),
                     amountOf(resource),
                     resource.path("amount").path("currency_code").asText(null)));
         } catch (Exception ex) {

@@ -10,6 +10,7 @@ public enum AdminActionType {
 
     ORDER_SHIPPED("Marked as shipped"),
     ORDER_CANCELLED("Cancelled and stock returned"),
+    ORDER_REFUNDED("Refunded to the customer"),
     STOCK_SET("Stock level set"),
     PRODUCT_CREATED("Product added to the catalogue"),
     PRODUCT_UPDATED("Product details changed"),

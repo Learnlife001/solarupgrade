@@ -91,6 +91,22 @@ public class Order {
     private String providerReference;
 
     /**
+     * The provider's id for the movement of money, as opposed to
+     * {@link #providerReference}, which identifies the order created at the
+     * provider. A refund is made against this one.
+     *
+     * <p>Null on orders paid before it was recorded, and on any provider that
+     * does not distinguish the two. The admin page checks for it rather than
+     * offering a refund button that cannot work.
+     */
+    private String captureReference;
+
+    /** The provider's id for the refund, once one has been made. */
+    private String refundReference;
+
+    private Instant refundedAt;
+
+    /**
      * When the "you have not finished paying" nudge went out. Recorded so the
      * reminder is sent once and only once -- an unpaid order that mails the
      * customer every hour is worse than one that never mails at all.
@@ -209,6 +225,46 @@ public class Order {
 
     public void setProviderReference(String providerReference) {
         this.providerReference = providerReference;
+    }
+
+    public String getCaptureReference() {
+        return captureReference;
+    }
+
+    public void setCaptureReference(String captureReference) {
+        this.captureReference = captureReference;
+    }
+
+    public String getRefundReference() {
+        return refundReference;
+    }
+
+    public Instant getRefundedAt() {
+        return refundedAt;
+    }
+
+    /**
+     * Records that the money went back.
+     *
+     * <p>Sets the status as well, so there is no way to write the refund
+     * without the state that goes with it.
+     */
+    public void markRefunded(String reference) {
+        this.refundReference = reference;
+        this.refundedAt = Instant.now();
+        this.status = OrderStatus.REFUNDED;
+    }
+
+    /**
+     * Whether a refund could be attempted at all.
+     *
+     * <p>Money has to have moved, and it must not already have gone back.
+     * Shipped counts: goods going out does not stop a customer being owed
+     * their money.
+     */
+    public boolean isRefundable() {
+        return (status == OrderStatus.PAID || status == OrderStatus.SHIPPED)
+                && captureReference != null && !captureReference.isBlank();
     }
 
     /** Naira, always: the shop's own books are kept in one currency. */

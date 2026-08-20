@@ -211,7 +211,47 @@ public class PayPalClient {
             throw new PaymentException("PayPal returned no capture status for " + payPalOrderId);
         }
         return new Capture("COMPLETED".equals(response.status()), response.status(),
-                capturedAmount(response), capturedCurrency(response));
+                capturedId(response), capturedAmount(response), capturedCurrency(response));
+    }
+
+    /**
+     * Sends a captured payment back in full.
+     *
+     * <p>Against the capture id rather than the order id: an order can hold
+     * more than one capture, and PayPal's refund endpoint addresses the
+     * movement of money, not the order around it.
+     *
+     * <p>No amount is sent, which is how PayPal is told to refund the lot. A
+     * figure calculated here could disagree with what was actually taken --
+     * after a conversion, by a rounding -- and the customer is owed exactly
+     * what left their account, not our arithmetic about it.
+     */
+    public Refund refund(String captureId) {
+        RefundResponse response;
+        try {
+            response = client.post()
+                    .uri("/v2/payments/captures/{id}/refund", captureId)
+                    .headers(headers -> headers.setBearerAuth(accessToken()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of())
+                    .retrieve()
+                    .body(RefundResponse.class);
+        } catch (RestClientException ex) {
+            // Never report a refund that errored as done. The order stays paid
+            // and visibly un-refunded, which is the state somebody can act on.
+            throw new PaymentException("Could not refund PayPal capture " + captureId, ex);
+        }
+
+        if (response == null || response.status() == null) {
+            throw new PaymentException("PayPal returned no refund status for " + captureId);
+        }
+        // COMPLETED is money returned. PENDING happens and is not a failure,
+        // but it is not done either, and saying otherwise would tell a customer
+        // their money is back before it is.
+        return new Refund("COMPLETED".equals(response.status()), response.status(),
+                response.id(),
+                response.amount() == null ? null : new BigDecimal(response.amount().value()),
+                response.amount() == null ? null : response.amount().currency_code());
     }
 
     /**
@@ -261,6 +301,17 @@ public class PayPalClient {
         return value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
+    /**
+     * The id of the capture itself, which is what a refund is made against.
+     *
+     * <p>It used to be thrown away: only the amount and currency were read out
+     * of the response. Refunds could not be built until it was kept, because
+     * PayPal refunds a capture and nothing else identifies one.
+     */
+    private static String capturedId(CaptureResponse response) {
+        return firstCapture(response).map(CaptureDetail::id).orElse(null);
+    }
+
     private static BigDecimal capturedAmount(CaptureResponse response) {
         return firstCapture(response).map(c -> new BigDecimal(c.amount().value())).orElse(null);
     }
@@ -285,7 +336,13 @@ public class PayPalClient {
     }
 
     /** The outcome of a capture attempt, and what was actually taken. */
-    public record Capture(boolean completed, String status, BigDecimal amount, String currency) {
+    public record Capture(boolean completed, String status, String id,
+                          BigDecimal amount, String currency) {
+    }
+
+    /** @param id PayPal's id for the refund, kept for reconciliation */
+    public record Refund(boolean completed, String status, String id,
+                         BigDecimal amount, String currency) {
     }
 
     // --- Wire shapes. Field names match PayPal's JSON. ----------------------
@@ -312,6 +369,9 @@ public class PayPalClient {
     }
 
     record Amount(String currency_code, String value) {
+    }
+
+    record RefundResponse(String id, String status, Amount amount) {
     }
 
     record VerifyResponse(String verification_status) {

@@ -69,7 +69,8 @@ class PaymentWebhookTest {
     /** What a provider hands back once it has read its own verified body. */
     private void providerReads(String reference) {
         when(provider.readWebhook(anyString())).thenReturn(Optional.of(
-                new PaymentProvider.PaymentEvent(1L, reference, new BigDecimal("211.11"), "EUR")));
+                new PaymentProvider.PaymentEvent(1L, reference, "CAPTURE-1",
+                        new BigDecimal("211.11"), "EUR")));
     }
 
     /** The whole point: an unsigned body is refused, however well-formed. */
@@ -84,7 +85,8 @@ class PaymentWebhookTest {
                         .content(CAPTURE_EVENT))
                 .andExpect(status().isOk());
 
-        verify(paymentService, never()).settleFromWebhook(anyLong(), anyString(), any(), anyString());
+        verify(paymentService, never())
+                .settleFromWebhook(anyLong(), anyString(), anyString(), any(), anyString());
     }
 
     @Test
@@ -98,7 +100,8 @@ class PaymentWebhookTest {
                         .content(CAPTURE_EVENT))
                 .andExpect(status().isOk());
 
-        verify(paymentService).settleFromWebhook(anyLong(), anyString(), any(), anyString());
+        verify(paymentService)
+                .settleFromWebhook(anyLong(), anyString(), anyString(), any(), anyString());
     }
 
     /**
@@ -115,7 +118,8 @@ class PaymentWebhookTest {
                         .content(CAPTURE_EVENT))
                 .andExpect(status().isOk());
 
-        verify(paymentService, never()).settleFromWebhook(anyLong(), anyString(), any(), anyString());
+        verify(paymentService, never())
+                .settleFromWebhook(anyLong(), anyString(), anyString(), any(), anyString());
     }
 
     @Test
@@ -130,7 +134,8 @@ class PaymentWebhookTest {
                         .content("{\"event_type\":\"BILLING.SUBSCRIPTION.CREATED\",\"resource\":{}}"))
                 .andExpect(status().isOk());
 
-        verify(paymentService, never()).settleFromWebhook(anyLong(), anyString(), any(), anyString());
+        verify(paymentService, never())
+                .settleFromWebhook(anyLong(), anyString(), anyString(), any(), anyString());
     }
 
     /**

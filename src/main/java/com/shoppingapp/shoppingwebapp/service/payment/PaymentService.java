@@ -116,6 +116,9 @@ public class PaymentService {
             throw new PaymentException("Captured amount does not match order " + order.getId());
         }
 
+        // Kept before markPaid, so the id a refund is made against is on the
+        // order in the same transaction that says it was paid.
+        order.setCaptureReference(capture.reference());
         orderService.markPaid(order);
         log.info("Order {} paid via {} {}", order.getId(), provider.id(), reference);
         return true;
@@ -128,7 +131,8 @@ public class PaymentService {
      * nothing, which matters because providers retry.
      */
     @Transactional
-    public void settleFromWebhook(Long orderId, String reference, BigDecimal amount, String currency) {
+    public void settleFromWebhook(Long orderId, String reference, String captureReference,
+                                  BigDecimal amount, String currency) {
         Optional<Order> found = orderRepository.findById(orderId);
         if (found.isEmpty()) {
             log.warn("Webhook referenced unknown order {}", orderId);
@@ -154,10 +158,69 @@ public class PaymentService {
             return;
         }
 
+        // The capture id travels with the notification, so an order settled
+        // this way -- the buyer closed the tab -- is as refundable as one
+        // settled on the return journey.
+        if (captureReference != null && !captureReference.isBlank()) {
+            order.setCaptureReference(captureReference);
+        }
         // Through OrderService rather than setting the status here, so the
         // receipt goes out on this route too and only on the transition.
         orderService.markPaid(order);
         log.info("Order {} paid via webhook", orderId);
+    }
+
+    /**
+     * Sends a customer's money back.
+     *
+     * <p>The provider is asked first and the order is only changed if it says
+     * the money went. The other order -- mark it refunded, then call -- would
+     * leave an order claiming a refund that never happened, which is the
+     * version a customer notices.
+     *
+     * @return true when the money is confirmed back
+     */
+    @Transactional
+    public boolean refund(Long orderId) {
+        // Loaded here rather than passed in. The admin page has already read
+        // this order in an earlier transaction, and returning stock refreshes
+        // product rows under a lock -- which needs entities managed by *this*
+        // transaction. Passing the loaded order in threw "Entity not managed",
+        // exactly as an earlier version of the cancel path did.
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new PaymentException("No order with id " + orderId));
+
+        if (order.getStatus() == OrderStatus.REFUNDED) {
+            // Already done. A double click must not send money twice.
+            return true;
+        }
+        if (!order.isRefundable()) {
+            throw new PaymentException("Order " + order.getId() + " cannot be refunded from here");
+        }
+
+        PaymentProvider provider = require(order.getPaymentMethod());
+        if (!provider.canRefund()) {
+            throw new PaymentException(provider.id() + " cannot make refunds from here");
+        }
+
+        PaymentProvider.RefundResult refund = provider.refund(order);
+        if (!refund.completed()) {
+            log.warn("{} refund for order {} came back {}",
+                    provider.id(), order.getId(), refund.status());
+            return false;
+        }
+
+        orderService.markRefunded(order, refund.reference());
+        log.info("Order {} refunded via {} {}", order.getId(), provider.id(), refund.reference());
+        return true;
+    }
+
+    /** Whether the refund button should be offered for this order at all. */
+    public boolean canRefund(Order order) {
+        return order.isRefundable()
+                && providers.forMethod(order.getPaymentMethod())
+                        .map(PaymentProvider::canRefund)
+                        .orElse(false);
     }
 
     private static boolean chargeMatches(Order order, PaymentProvider.CaptureResult capture) {

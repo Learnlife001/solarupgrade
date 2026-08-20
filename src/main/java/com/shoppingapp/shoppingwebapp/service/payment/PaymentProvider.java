@@ -77,6 +77,30 @@ public interface PaymentProvider {
     CaptureResult capture(Order order);
 
     /**
+     * Whether this provider can send money back from here.
+     *
+     * <p>Default false, so a provider is never assumed capable of something it
+     * has not implemented. A shop that thinks it can refund and cannot is worse
+     * than one that knows it cannot: the refund button would fail in front of a
+     * customer already owed their money.
+     */
+    default boolean canRefund() {
+        return false;
+    }
+
+    /**
+     * Sends the whole charge back.
+     *
+     * <p>Full refunds only. Part-refunds mean deciding which line was returned,
+     * what happens to delivery, and how the remainder is represented on an
+     * order -- none of which this application models, and all of which would be
+     * guessed at by an implementation that pretended otherwise.
+     */
+    default RefundResult refund(Order order) {
+        throw new PaymentException(id() + " cannot make refunds from here");
+    }
+
+    /**
      * Whether webhooks can be proved genuine on this deployment.
      *
      * <p>Usually a signing secret. False means every webhook is ignored: a
@@ -109,8 +133,22 @@ public interface PaymentProvider {
     /**
      * @param completed true only when the provider confirms the money moved
      * @param status    the provider's own word for it, for the log line
+     * @param reference the provider's id for this movement of money, which is
+     *                  what a refund is later made against. Distinct from the
+     *                  id of the order created at the provider, and null on a
+     *                  provider that does not tell the two apart.
      */
-    record CaptureResult(boolean completed, String status, BigDecimal amount, String currency) {
+    record CaptureResult(boolean completed, String status, String reference,
+                         BigDecimal amount, String currency) {
+    }
+
+    /**
+     * @param completed true only when the provider confirms the money went back
+     * @param reference the provider's id for the refund, kept so the order can
+     *                  be reconciled against the provider's own records
+     */
+    record RefundResult(boolean completed, String status, String reference,
+                        BigDecimal amount, String currency) {
     }
 
     /**
@@ -120,7 +158,12 @@ public interface PaymentProvider {
      * @param reference the provider's id for the payment, checked against the
      *                  one we started so a genuine notification for somebody
      *                  else's payment cannot settle this order
+     * @param captureReference the id a refund would later be made against.
+     *                  Carried here because an order settled by webhook -- the
+     *                  buyer closed the tab -- has to be as refundable as one
+     *                  settled on the return journey.
      */
-    record PaymentEvent(Long orderId, String reference, BigDecimal amount, String currency) {
+    record PaymentEvent(Long orderId, String reference, String captureReference,
+                        BigDecimal amount, String currency) {
     }
 }

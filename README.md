@@ -324,6 +324,44 @@ schema has nowhere to put one.
 **These pages have not been reviewed by a lawyer,** and every one of them says
 so. They are a solid starting point, not advice.
 
+## Refunds
+
+A paid order can be refunded in full from `/admin/orders/{id}`. The provider is
+asked first, and the order only changes if it confirms the money went — the
+other order, marking it refunded and then calling, leaves an order claiming a
+refund that never happened, which is the version a customer notices.
+
+**The reason is required.** A refund is the one action in the back office that
+moves money outward, and "who refunded this and why" is what somebody
+reconciling accounts asks weeks later. It goes into the audit trail with the
+amount.
+
+**Stock comes back only if it never left.** Refunding before dispatch returns
+the units to the shelf; refunding after dispatch does not, because the goods
+are with the customer and inventing them back into stock sells something twice
+— with the second buyer discovering it. When the parcel comes back, the stock
+figure is set by hand from the catalogue, which is a count of a real shelf.
+
+**Full refunds only.** Part-refunds mean deciding which line was returned, what
+happens to delivery, and how the remainder is represented on an order. None of
+that is modelled here, and an implementation that pretended otherwise would be
+guessing.
+
+Two things had to change to make refunds possible at all:
+
+- **The capture id is now stored.** `provider_reference` is the id of the order
+  created at the provider; a refund is made against the *capture*, the
+  individual movement of money, which has an id of its own. It was being read
+  out of PayPal's response and thrown away. Orders paid before this migration
+  have none, and the admin page checks for it rather than offering a button
+  that cannot work — those are refunded in the provider's own dashboard.
+- **The webhook carries it too**, so an order settled because the buyer closed
+  the tab is as refundable as one settled on the return journey.
+
+`REFUNDED` is its own status rather than reusing `CANCELLED`, which means an
+order that lapsed before any money moved. A customer reading "cancelled" on an
+order they paid for would reasonably wonder where their money is.
+
 ## Adding a payment provider
 
 The shop is priced in naira and PayPal cannot charge naira, so this deployment
@@ -1093,8 +1131,6 @@ These are deliberate and worth picking up next:
   wait on a Nigerian provider; going live needs a PayPal Business account,
   fresh Live credentials and a new Live webhook. Adding that provider is now a
   class rather than a rewrite — see "Adding a payment provider".
-- **No refunds.** A paid order can be shipped but not reversed, so a customer
-  who wants their money back has to be handled outside the application.
 - **Legal pages need a lawyer's eye** before they are relied on, and the
   business details behind them must be supplied or every page stays marked as
   a draft.

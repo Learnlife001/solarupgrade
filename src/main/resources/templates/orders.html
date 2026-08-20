@@ -45,7 +45,7 @@
                 <td class="num"><span th:text="${order.totalDisplay}">0.00</span></td>
                 <td>
                     <span class="status-pill"
-                          th:classappend="${order.status.name() == 'PAID'} ? 'paid'"
+                          th:classappend="'status-' + ${order.status.name().toLowerCase()}"
                           th:text="${order.status.displayName}">status</span>
                 </td>
             </tr>
