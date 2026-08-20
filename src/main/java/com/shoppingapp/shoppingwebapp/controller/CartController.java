@@ -6,6 +6,7 @@ import com.shoppingapp.shoppingwebapp.service.CartService;
 import com.shoppingapp.shoppingwebapp.service.ProductService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.security.Principal;
+import java.util.NoSuchElementException;
 
 @Controller
 @RequestMapping("/cart")
@@ -48,7 +50,7 @@ public class CartController {
                       Principal principal,
                       RedirectAttributes redirectAttributes) {
         User user = currentUser.require(principal);
-        CartService.AddOutcome outcome = cartService.add(user, productService.getById(productId), quantity);
+        CartService.AddOutcome outcome = cartService.add(user, productService.getSellable(productId), quantity);
         redirectAttributes.addFlashAttribute("message", messageFor(outcome));
         return "redirect:/cart";
     }
@@ -67,7 +69,7 @@ public class CartController {
                                 @RequestParam(defaultValue = "1") int quantity,
                                 Principal principal) {
         User user = currentUser.require(principal);
-        CartService.AddOutcome outcome = cartService.add(user, productService.getById(productId), quantity);
+        CartService.AddOutcome outcome = cartService.add(user, productService.getSellable(productId), quantity);
         return new CartSummary(cartService.itemCountFor(user), messageFor(outcome));
     }
 
@@ -98,5 +100,18 @@ public class CartController {
     public String remove(@PathVariable Long itemId, Principal principal) {
         cartService.remove(currentUser.require(principal), itemId);
         return "redirect:/cart";
+    }
+
+    /**
+     * The basket asked for a product that is no longer sold.
+     *
+     * <p>A stale tab, or a page opened before the product was archived. A 404
+     * would be technically right and useless: the person clicked "add to
+     * basket" and deserves a sentence saying why nothing happened.
+     */
+    @ExceptionHandler(NoSuchElementException.class)
+    public String productGone(RedirectAttributes flash) {
+        flash.addFlashAttribute("error", "We no longer sell that item.");
+        return "redirect:/products";
     }
 }

@@ -63,6 +63,18 @@ public class Product {
     private String imageUrl;
 
     /**
+     * Retired from the shop, but not gone.
+     *
+     * <p>A product cannot simply be deleted: {@code order_items} point at it,
+     * and an order from last month has to keep saying what it was for. So a
+     * product that is no longer sold is archived -- hidden from the catalogue,
+     * still listed in the admin area, still attached to every order that bought
+     * it, and restorable if it comes back.
+     */
+    @Column(nullable = false)
+    private boolean archived = false;
+
+    /**
      * Ordered by sort_order so the table reads the way it was written rather
      * than in whatever order the rows come back.
      */
@@ -157,5 +169,17 @@ public class Product {
 
     public void setImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
+    }
+
+    public boolean isArchived() {
+        return archived;
+    }
+
+    public void archive() {
+        this.archived = true;
+    }
+
+    public void restore() {
+        this.archived = false;
     }
 }

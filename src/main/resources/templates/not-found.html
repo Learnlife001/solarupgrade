@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Not found')}"></head>
+<body>
+
+<div th:replace="~{fragments/layout :: header}"></div>
+
+<main class="container narrow">
+    <h1>We cannot find that</h1>
+    <!--
+      Said plainly, and separately from the "something went wrong" page. A
+      retired product, an old link and a typed URL all land here, and none of
+      them means the shop is broken.
+    -->
+    <p>
+        The page you asked for is not here. It may have been a product we no
+        longer sell, or a link that has changed.
+    </p>
+    <p><a class="button" th:href="@{/products}">Browse the shop</a></p>
+</main>
+
+<div th:replace="~{fragments/layout :: footer}"></div>
+
+</body>
+</html>

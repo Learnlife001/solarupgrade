@@ -1,18 +1,21 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{admin/layout :: head('Stock')}"></head>
+<head th:replace="~{admin/layout :: head('Catalogue')}"></head>
 <body>
 
 <div th:replace="~{admin/layout :: header}"></div>
 
 <main class="container">
-    <h1>Stock</h1>
+    <div class="admin-head">
+        <h1>Catalogue</h1>
+        <a class="button" th:href="@{/admin/products/new}">Add a product</a>
+    </div>
     <div th:replace="~{admin/layout :: flash}"></div>
 
     <p class="note">
-        Lowest first. The figure is what is on the shelf, not a change to it —
-        count, then type the count. Orders take stock out on their own, so
-        anything you type here replaces whatever they left.
+        Lowest stock first. The stock figure is what is on the shelf, not a
+        change to it &mdash; count, then type the count. Orders take stock out on
+        their own, so anything typed here replaces whatever they left.
     </p>
 
     <table class="admin-table">
@@ -23,19 +26,25 @@
             <th class="numeric">Price</th>
             <th class="numeric">In stock</th>
             <th>Set to</th>
+            <th>Actions</th>
         </tr>
         </thead>
         <tbody>
-        <tr th:each="product : ${products}">
+        <tr th:each="product : ${products}" th:classappend="${product.archived} ? 'is-archived'">
             <td>
-                <a th:href="@{/products/{id}(id=${product.id})}" th:text="${product.name}">Name</a>
+                <!-- Archived products have no public page to link to. -->
+                <a th:unless="${product.archived}" th:href="@{/products/{id}(id=${product.id})}"
+                   th:text="${product.name}">Name</a>
+                <span th:if="${product.archived}" th:text="${product.name}">Name</span>
+                <span class="badge archived" th:if="${product.archived}">archived</span>
             </td>
             <td th:text="${product.category.displayName}">Category</td>
-            <td class="numeric" th:text="${product.priceDisplay}">₦0</td>
+            <td class="numeric" th:text="${product.priceDisplay}">&#8358;0</td>
             <td class="numeric">
                 <span th:text="${product.stock}">0</span>
-                <span class="badge low" th:if="${product.stock < lowStockThreshold and product.stock > 0}">low</span>
-                <span class="badge out" th:if="${product.stock == 0}">out</span>
+                <span class="badge low"
+                      th:if="${!product.archived and product.stock < lowStockThreshold and product.stock > 0}">low</span>
+                <span class="badge out" th:if="${!product.archived and product.stock == 0}">out</span>
             </td>
             <td>
                 <form th:action="@{/admin/products/{id}/stock(id=${product.id})}" method="post"
@@ -45,9 +54,31 @@
                     <button type="submit" class="button-secondary button-small">Save</button>
                 </form>
             </td>
+            <td class="row-actions">
+                <a class="button-secondary button-small"
+                   th:href="@{/admin/products/{id}/edit(id=${product.id})}">Edit</a>
+
+                <!--
+                  Archive, never delete: orders point at these rows, and an
+                  order has to keep saying what it was for.
+                -->
+                <form th:if="${!product.archived}" method="post" class="inline-form"
+                      th:action="@{/admin/products/{id}/archive(id=${product.id})}">
+                    <button type="submit" class="link-button">Archive</button>
+                </form>
+                <form th:if="${product.archived}" method="post" class="inline-form"
+                      th:action="@{/admin/products/{id}/restore(id=${product.id})}">
+                    <button type="submit" class="link-button">Restore</button>
+                </form>
+            </td>
         </tr>
         </tbody>
     </table>
+
+    <p class="note">
+        Archiving takes a product off the shop and out of search. It stays on
+        every order that bought it, and can be restored.
+    </p>
 </main>
 
 </body>

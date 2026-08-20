@@ -25,26 +25,32 @@ public class ProductService {
         this.productRepository = productRepository;
     }
 
+    /** What the shop sells today. Archived products are not it. */
     public List<Product> findAll() {
-        return productRepository.findAll();
+        return productRepository.findByArchivedFalse();
     }
 
     public List<Product> findByCategory(Category category) {
-        return productRepository.findByCategory(category);
+        return productRepository.findByCategoryAndArchivedFalse(category);
     }
 
     public List<Product> search(String query) {
         if (query == null || query.isBlank()) {
             return findAll();
         }
-        return productRepository.findByNameContainingIgnoreCase(query.trim());
+        return productRepository.findByNameContainingIgnoreCaseAndArchivedFalse(query.trim());
     }
 
     /**
      * The detail page's product, with its specification rows already loaded.
+     *
+     * <p>An archived product is treated as missing here. Its page would
+     * otherwise stay reachable by an old link or a search engine, with an
+     * "add to basket" button on something we have stopped selling.
      */
     public Product getWithSpecs(Long id) {
         return productRepository.findWithSpecsById(id)
+                .filter(product -> !product.isArchived())
                 .orElseThrow(() -> new NoSuchElementException("No product with id " + id));
     }
 
@@ -56,7 +62,7 @@ public class ProductService {
      */
     public List<Product> pairsWith(Product product, int limit) {
         return productRepository
-                .findByCategoryInAndStockGreaterThanAndIdNot(
+                .findByCategoryInAndStockGreaterThanAndIdNotAndArchivedFalse(
                         product.getCategory().pairsWith(), 0, product.getId())
                 .stream()
                 .limit(limit)
@@ -92,8 +98,52 @@ public class ProductService {
         return productRepository.save(product);
     }
 
+    /**
+     * Any product, archived or not. For the admin area, which has to be able to
+     * see and restore what the shop is hiding.
+     */
     public Product getById(Long id) {
         return productRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("No product with id " + id));
+    }
+
+    /**
+     * A product a customer is allowed to act on.
+     *
+     * <p>The basket goes through this rather than {@link #getById}: hiding a
+     * product from the catalogue while still accepting "add to basket" for its
+     * id would be a hole rather than a retirement, and the id is in the page
+     * source of every order that ever contained it.
+     */
+    public Product getSellable(Long id) {
+        Product product = getById(id);
+        if (product.isArchived()) {
+            throw new NoSuchElementException("Product " + id + " is no longer sold");
+        }
+        return product;
+    }
+
+    /** Everything, newest last. The admin list, which shows archived rows too. */
+    public List<Product> all() {
+        return productRepository.findAll();
+    }
+
+    @Transactional
+    public Product save(Product product) {
+        return productRepository.save(product);
+    }
+
+    @Transactional
+    public Product archive(Long id) {
+        Product product = getById(id);
+        product.archive();
+        return productRepository.save(product);
+    }
+
+    @Transactional
+    public Product restore(Long id) {
+        Product product = getById(id);
+        product.restore();
+        return productRepository.save(product);
     }
 }

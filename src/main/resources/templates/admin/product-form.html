@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/layout :: head('Product')}"></head>
+<body>
+
+<div th:replace="~{admin/layout :: header}"></div>
+
+<main class="container narrow legal">
+    <p class="breadcrumb"><a th:href="@{/admin/products}">&larr; Catalogue</a></p>
+
+    <h1 th:text="${heading}">Product</h1>
+    <div th:replace="~{admin/layout :: flash}"></div>
+
+    <section class="panel">
+        <!--
+          One form for both jobs. A new product posts to the collection, an
+          existing one to its own id, so neither can be mistaken for the other
+          by a resubmitted page.
+        -->
+        <form th:object="${productForm}" method="post"
+              th:action="${productForm.id == null}
+                         ? @{/admin/products}
+                         : @{/admin/products/{id}(id=${productForm.id})}">
+            <input type="hidden" th:field="*{id}">
+
+            <label>
+                Name
+                <input type="text" th:field="*{name}" autofocus>
+                <span class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}">error</span>
+            </label>
+
+            <label>
+                Description
+                <textarea th:field="*{description}" rows="3"></textarea>
+                <span class="field-error" th:if="${#fields.hasErrors('description')}"
+                      th:errors="*{description}">error</span>
+                <span class="note">This is the sentence under the name on the shop page.</span>
+            </label>
+
+            <div class="field-row">
+                <label>
+                    Price in naira
+                    <input type="number" th:field="*{price}" step="0.01" min="0.01">
+                    <span class="field-error" th:if="${#fields.hasErrors('price')}"
+                          th:errors="*{price}">error</span>
+                </label>
+                <label>
+                    In stock
+                    <input type="number" th:field="*{stock}" min="0">
+                    <span class="field-error" th:if="${#fields.hasErrors('stock')}"
+                          th:errors="*{stock}">error</span>
+                </label>
+            </div>
+
+            <label>
+                Category
+                <select th:field="*{category}">
+                    <option value="">Choose one</option>
+                    <option th:each="c : ${categories}" th:value="${c}"
+                            th:text="${c.displayName}">Category</option>
+                </select>
+                <span class="field-error" th:if="${#fields.hasErrors('category')}"
+                      th:errors="*{category}">error</span>
+            </label>
+
+            <!--
+              A list rather than a text box. The value is a path to a file that
+              ships with the application, so a typo here is a broken image on
+              the shop found by a customer days later. Only artwork that also
+              exists as a PNG is offered, because the receipts need that one.
+            -->
+            <label>
+                Picture
+                <select th:field="*{imageUrl}">
+                    <option value="">No picture</option>
+                    <option th:each="image : ${images}" th:value="${image}" th:text="${image}">image</option>
+                </select>
+                <span class="note">
+                    Drawings that ship with the shop. A product with no picture shows a placeholder.
+                </span>
+            </label>
+
+            <div class="form-actions">
+                <button type="submit" class="button">Save</button>
+                <a class="button-secondary" th:href="@{/admin/products}">Cancel</a>
+            </div>
+        </form>
+    </section>
+
+    <!--
+      Archiving lives here as well as in the list, because this is the page
+      somebody is on when they decide a product is finished.
+    -->
+    <section class="panel" th:if="${product != null}">
+        <h2>Retiring this product</h2>
+        <p class="note" th:if="${!product.archived}">
+            Archiving takes it off the shop and out of search. It stays on every
+            order that bought it, and can be restored. Nothing here deletes a
+            product: orders point at it, and an order has to keep saying what it
+            was for.
+        </p>
+        <p class="note" th:if="${product.archived}">
+            This product is archived. It is not in the shop and cannot be added
+            to a basket.
+        </p>
+        <form th:if="${!product.archived}" method="post"
+              th:action="@{/admin/products/{id}/archive(id=${product.id})}">
+            <button type="submit" class="button-secondary">Archive</button>
+        </form>
+        <form th:if="${product.archived}" method="post"
+              th:action="@{/admin/products/{id}/restore(id=${product.id})}">
+            <button type="submit" class="button-secondary">Put back in the shop</button>
+        </form>
+    </section>
+</main>
+
+</body>
+</html>

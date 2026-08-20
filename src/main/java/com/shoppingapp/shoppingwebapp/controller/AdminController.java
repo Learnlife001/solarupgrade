@@ -125,30 +125,4 @@ public class AdminController {
         return "redirect:/admin/orders/" + id;
     }
 
-    @GetMapping("/products")
-    public String products(Model model) {
-        model.addAttribute("products", productService.byStockAscending());
-        model.addAttribute("lowStockThreshold", LOW_STOCK);
-        return "admin/products";
-    }
-
-    @PostMapping("/products/{id}/stock")
-    public String setStock(@PathVariable Long id,
-                           @RequestParam int stock,
-                           Principal principal,
-                           RedirectAttributes flash) {
-        try {
-            int before = productService.getById(id).getStock();
-            var product = productService.setStock(id, stock);
-            log.info("Stock for product {} set to {} by {}", id, stock, principal.getName());
-            auditService.record(principal.getName(), AdminActionType.STOCK_SET,
-                    AuditService.PRODUCT, id,
-                    product.getName() + ": " + before + " to " + stock);
-            flash.addFlashAttribute("message",
-                    product.getName() + " set to " + stock + " in stock.");
-        } catch (IllegalArgumentException ex) {
-            flash.addFlashAttribute("error", ex.getMessage());
-        }
-        return "redirect:/admin/products";
-    }
 }

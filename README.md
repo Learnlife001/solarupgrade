@@ -324,6 +324,40 @@ schema has nowhere to put one.
 **These pages have not been reviewed by a lawyer,** and every one of them says
 so. They are a solid starting point, not advice.
 
+## Running the catalogue
+
+`/admin/products` creates, edits, restocks and retires products. Until this
+existed the only thing the back office could change was a stock figure: a price
+change meant writing a migration, committing it and waiting for a deploy, which
+is not a shop anybody can run.
+
+**Nothing deletes.** `order_items` point at products, and an order from last
+month has to keep saying what it was for. A product that is no longer sold is
+*archived* — out of the catalogue, out of search, no page, and refused by the
+basket — while staying in the admin list and on every order that bought it. It
+can be restored. Order history that rewrote itself whenever the catalogue
+changed would be a far worse bug than a long list in the back office.
+
+**The picture is chosen from a list, not typed.** The value is a path to a file
+that ships with the application, so a typo is a broken image on the shop found
+by a customer days later. Only artwork that *also* exists as a PNG under
+`static/images/email/` is offered, because that is the copy the receipts use —
+a product with an SVG and no PNG looks right on the site and arrives with a
+hole in it in every email.
+
+**Every change is audited with what it moved from**, not just what it is now.
+"Price changed" answers nothing; "380,000 to 399,000, by this admin, at this
+time" answers the question actually being asked when a sale goes wrong.
+
+Archiving is also what made the 404 page necessary. Every lookup in this
+application ends in `orElseThrow`, and each one used to become a 500 — the
+"something went wrong" page, a stack trace, and now an alert email — for a
+mistyped URL. Retiring a product turns every old link and search result for it
+into exactly that request, so `NotFoundAdvice` answers them with a 404 and a
+page that says the thing is gone. The basket is deliberately excluded: someone
+clicking "add to basket" on a tab opened before the product was retired gets a
+sentence explaining why nothing happened, not a 404.
+
 ## When something breaks
 
 `/suppliers` returned a 500 to every visitor for twenty-five minutes and the
@@ -1017,8 +1051,6 @@ These are deliberate and worth picking up next:
 - **Legal pages need a lawyer's eye** before they are relied on, and the
   business details behind them must be supplied or every page stays marked as
   a draft.
-- **Products can be restocked but not created or edited** from the admin area;
-  the catalogue still comes from migrations.
 - **Stock is held, not reserved indefinitely.** Placing an order decrements
   stock under a row lock, so two shoppers racing for the last unit cannot both
   win — the loser is refused at checkout. An order left unpaid for 72 hours is

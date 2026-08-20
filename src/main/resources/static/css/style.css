@@ -413,6 +413,7 @@ img { max-width: 100%; display: block; }
 .badge.in    { background: var(--accent-soft); color: var(--accent-ink); }
 .badge.low   { background: var(--warn-soft);   color: var(--warn); }
 .badge.out   { background: var(--danger-soft); color: var(--danger); }
+.badge.archived { background: var(--surface-2); color: var(--ink-2); }
 
 /* --- Product detail -------------------------------------------------------- */
 
@@ -1073,6 +1074,36 @@ input[type="number"].qty-input { width: 4.6rem; margin-top: 0; }
 }
 
 /* Wide tables scroll inside their own box rather than the page. */
+/* Page title with its primary action opposite, for admin lists that create. */
+.admin-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: .5rem;
+}
+
+.admin-head h1 { margin: 0; }
+
+/* An archived row is still readable -- it is history, not an error -- but it
+   should not compete with the products actually on sale. */
+.admin-table tr.is-archived td { opacity: .62; }
+
+.row-actions {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    white-space: nowrap;
+}
+
+.form-actions {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    margin-top: 1.5rem;
+}
+
 .admin-table {
     width: 100%;
     border-collapse: collapse;

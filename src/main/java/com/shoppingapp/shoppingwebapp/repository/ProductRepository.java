@@ -10,9 +10,17 @@ import java.util.Optional;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
-    List<Product> findByCategory(Category category);
+    /*
+     * The shop only ever sees products that are not archived. Every one of
+     * these carries AndArchivedFalse rather than the callers remembering to
+     * filter: a forgotten filter puts a retired product back on sale, and the
+     * first anyone hears of it is an order for something no longer stocked.
+     */
+    List<Product> findByArchivedFalse();
 
-    List<Product> findByNameContainingIgnoreCase(String name);
+    List<Product> findByCategoryAndArchivedFalse(Category category);
+
+    List<Product> findByNameContainingIgnoreCaseAndArchivedFalse(String name);
 
     /**
      * The detail page renders the specification table, and open-in-view is off,
@@ -28,6 +36,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     long countByStockLessThan(int threshold);
 
     /** For the "pairs with" strip: in stock, and never the product being viewed. */
-    List<Product> findByCategoryInAndStockGreaterThanAndIdNot(
+    List<Product> findByCategoryInAndStockGreaterThanAndIdNotAndArchivedFalse(
             List<Category> categories, int minimumStock, Long excludedId);
 }
