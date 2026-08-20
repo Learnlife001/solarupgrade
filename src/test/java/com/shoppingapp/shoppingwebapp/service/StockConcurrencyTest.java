@@ -8,11 +8,13 @@ import com.shoppingapp.shoppingwebapp.model.User;
 import com.shoppingapp.shoppingwebapp.repository.CartItemRepository;
 import com.shoppingapp.shoppingwebapp.repository.OrderRepository;
 import com.shoppingapp.shoppingwebapp.repository.ProductRepository;
+import com.shoppingapp.shoppingwebapp.repository.StockMovementRepository;
 import com.shoppingapp.shoppingwebapp.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Limit;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.math.BigDecimal;
@@ -49,6 +51,9 @@ class StockConcurrencyTest {
 
     @Autowired
     private ProductRepository productRepository;
+
+    @Autowired
+    private StockMovementRepository stockMovementRepository;
 
     @Autowired
     private OrderRepository orderRepository;
@@ -91,6 +96,11 @@ class StockConcurrencyTest {
             userRepository.delete(buyer);
         });
         buyers.clear();
+        // The stock ledger points at the product row, so it goes first. The
+        // application never deletes a product -- it archives -- so this is
+        // test cleanup rather than something the shop does.
+        stockMovementRepository.deleteAll(stockMovementRepository
+                .findByProductIdOrderByHappenedAtDescIdDesc(lastOne.getId(), Limit.of(1000)));
         productRepository.deleteById(lastOne.getId());
     }
 

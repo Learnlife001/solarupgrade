@@ -88,6 +88,43 @@
     </section>
 
     <!--
+      Why the stock figure is what it is. This is the page somebody is on when
+      they ask, usually while holding a different count of the same shelf.
+    -->
+    <section class="panel" th:if="${product != null}">
+        <h2>Stock history</h2>
+        <p class="note" th:if="${#lists.isEmpty(movements)}">
+            Nothing has moved this product&rsquo;s stock since the history began.
+        </p>
+        <table class="admin-table" th:unless="${#lists.isEmpty(movements)}">
+            <thead>
+            <tr>
+                <th>When</th>
+                <th>Why</th>
+                <th class="numeric">Change</th>
+                <th class="numeric">Left</th>
+                <th>Who</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="movement : ${movements}">
+                <td th:text="${movement.happenedAtDisplay}">date</td>
+                <td>
+                    <span th:text="${movement.reason.displayName}">Reason</span>
+                    <a th:if="${movement.orderId != null}"
+                       th:href="@{/admin/orders/{id}(id=${movement.orderId})}"
+                       th:text="'#' + ${movement.orderId}">#1</a>
+                </td>
+                <td class="numeric" th:text="${movement.changeDisplay}">+0</td>
+                <td class="numeric" th:text="${movement.resultingStock}">0</td>
+                <!-- Blank where the shop did it rather than a person. -->
+                <td th:text="${movement.actor}"></td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!--
       Archiving lives here as well as in the list, because this is the page
       somebody is on when they decide a product is finished.
     -->

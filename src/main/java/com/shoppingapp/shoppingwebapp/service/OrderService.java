@@ -7,6 +7,7 @@ import com.shoppingapp.shoppingwebapp.model.Order;
 import com.shoppingapp.shoppingwebapp.model.OrderItem;
 import com.shoppingapp.shoppingwebapp.model.OrderStatus;
 import com.shoppingapp.shoppingwebapp.model.Product;
+import com.shoppingapp.shoppingwebapp.model.StockMovementReason;
 import com.shoppingapp.shoppingwebapp.model.User;
 import com.shoppingapp.shoppingwebapp.repository.OrderRepository;
 import com.shoppingapp.shoppingwebapp.repository.ProductRepository;
@@ -35,6 +36,7 @@ public class OrderService {
     private final CartService cartService;
     private final EmailService emailService;
     private final ExchangeRates exchangeRates;
+    private final StockService stockService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -43,12 +45,14 @@ public class OrderService {
                         ProductRepository productRepository,
                         CartService cartService,
                         EmailService emailService,
-                        ExchangeRates exchangeRates) {
+                        ExchangeRates exchangeRates,
+                        StockService stockService) {
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
         this.cartService = cartService;
         this.emailService = emailService;
         this.exchangeRates = exchangeRates;
+        this.stockService = stockService;
     }
 
     public List<Order> ordersFor(User user) {
@@ -100,8 +104,11 @@ public class OrderService {
                         "Not enough stock for " + product.getName()
                                 + " (wanted " + cartItem.getQuantity() + ", have " + product.getStock() + ")");
             }
-            product.setStock(product.getStock() - cartItem.getQuantity());
-            productRepository.save(product);
+            // Through StockService so the movement is recorded in the same
+            // transaction as the change; see StockService for why nothing sets
+            // stock directly any more.
+            stockService.move(product, -cartItem.getQuantity(),
+                    StockMovementReason.SALE, null, null);
             order.addItem(new OrderItem(product, cartItem.getQuantity()));
         }
 
@@ -172,8 +179,8 @@ public class OrderService {
             // The order still shows what was bought, from its own snapshot;
             // there is simply nowhere to return the stock to.
             if (product != null) {
-                product.setStock(product.getStock() + item.getQuantity());
-                productRepository.save(product);
+                stockService.move(product, item.getQuantity(),
+                        StockMovementReason.CANCELLATION, order.getId(), null);
             }
         }
 
@@ -242,8 +249,8 @@ public class OrderService {
             // The order still shows what was bought, from its own snapshot;
             // there is simply nowhere to return the stock to.
             if (product != null) {
-                product.setStock(product.getStock() + item.getQuantity());
-                productRepository.save(product);
+                stockService.move(product, item.getQuantity(),
+                        StockMovementReason.REFUND, order.getId(), null);
             }
         }
     }

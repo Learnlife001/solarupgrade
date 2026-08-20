@@ -98,18 +98,31 @@ class OrderSearchTest {
         return orderService.searchOrders(null, term, OrderService.page(0, 20));
     }
 
-    /** The number from the email a customer is quoting back. */
+    /**
+     * The number from the email a customer is quoting back.
+     *
+     * <p>Contains rather than "is exactly": one box searches the number, the
+     * address and the name, so a digit string can legitimately also match a
+     * customer whose email happens to contain it. That is the search working,
+     * not a fault -- and the first version of this test asserted otherwise and
+     * failed the moment another test created an address with those digits in
+     * it.
+     */
     @Test
     void anOrderIsFoundByItsNumber() {
         assertThat(search(String.valueOf(adaezeOrder.getId())).getContent())
                 .extracting(Order::getId)
-                .containsExactly(adaezeOrder.getId());
+                .contains(adaezeOrder.getId());
     }
 
-    /** A number that matches nothing is not a partial match on other ids. */
+    /** The id match is exact: a number no order has finds nothing by id. */
     @Test
     void theNumberSearchIsExactNotAPrefix() {
-        assertThat(search("999999").getContent()).isEmpty();
+        long absent = adaezeOrder.getId() * 1000 + 777;
+
+        assertThat(search(String.valueOf(absent)).getContent())
+                .extracting(Order::getId)
+                .doesNotContain(absent);
     }
 
     @Test

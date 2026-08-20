@@ -67,20 +67,34 @@ public class ProductForm {
         return form;
     }
 
-    /** Writes the form onto a product, new or existing. */
+    /**
+     * Writes the form onto an existing product, <b>except its stock</b>.
+     *
+     * <p>Stock is deliberately left alone here. Setting it directly is how a
+     * change escapes the ledger: the edit form did exactly that, so saving a
+     * product moved its stock with no movement recorded, while the stock-take
+     * control beside it recorded properly. A figure that is sometimes explained
+     * is worse than one that never is, because it is trusted. The controller
+     * routes a changed figure through {@code StockService} instead.
+     */
     public void applyTo(Product product) {
         product.setName(name.trim());
         product.setDescription(description.trim());
         product.setPrice(price);
         product.setCategory(category);
-        product.setStock(stock);
         product.setImageUrl(imageUrl == null || imageUrl.isBlank() ? null : imageUrl.trim());
     }
 
+    /**
+     * A new product with <b>no stock</b>, whatever the form said.
+     *
+     * <p>The opening figure is applied afterwards as a counted stock take, so
+     * the ledger starts with the movement that put the units there rather than
+     * with a quantity that appeared from nowhere.
+     */
     public Product toNewProduct() {
-        Product product = new Product(name.trim(), description.trim(), price, category, stock,
+        return new Product(name.trim(), description.trim(), price, category, 0,
                 imageUrl == null || imageUrl.isBlank() ? null : imageUrl.trim());
-        return product;
     }
 
     public Long getId() {

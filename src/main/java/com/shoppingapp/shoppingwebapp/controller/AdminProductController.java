@@ -7,6 +7,7 @@ import com.shoppingapp.shoppingwebapp.model.Product;
 import com.shoppingapp.shoppingwebapp.service.AuditService;
 import com.shoppingapp.shoppingwebapp.service.ProductImages;
 import com.shoppingapp.shoppingwebapp.service.ProductService;
+import com.shoppingapp.shoppingwebapp.service.StockService;
 import com.shoppingapp.shoppingwebapp.support.Redact;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -56,13 +57,16 @@ public class AdminProductController {
     private final ProductService productService;
     private final ProductImages productImages;
     private final AuditService auditService;
+    private final StockService stockService;
 
     public AdminProductController(ProductService productService,
                                   ProductImages productImages,
-                                  AuditService auditService) {
+                                  AuditService auditService,
+                                  StockService stockService) {
         this.productService = productService;
         this.productImages = productImages;
         this.auditService = auditService;
+        this.stockService = stockService;
     }
 
     @ModelAttribute("categories")
@@ -100,7 +104,13 @@ public class AdminProductController {
             return "admin/product-form";
         }
 
+        // Created empty, then counted up: the ledger's first row is the
+        // movement that put the units on the shelf rather than a figure that
+        // appeared from nowhere.
         Product saved = productService.save(form.toNewProduct());
+        if (form.getStock() > 0) {
+            saved = productService.setStock(saved.getId(), form.getStock(), principal.getName());
+        }
         log.info("Product {} created by {}", saved.getId(), Redact.email(principal.getName()));
         auditService.record(principal.getName(), AdminActionType.PRODUCT_CREATED,
                 AuditService.PRODUCT, saved.getId(),
@@ -109,11 +119,17 @@ public class AdminProductController {
         return "redirect:/admin/products";
     }
 
+    /** How many movements the edit page shows before it becomes a wall. */
+    private static final int HISTORY_SHOWN = 20;
+
     @GetMapping("/{id}/edit")
     public String edit(@PathVariable Long id, Model model) {
         Product product = productService.getById(id);
         model.addAttribute("productForm", ProductForm.of(product));
         model.addAttribute("product", product);
+        // Shown here because this is the page somebody is on when they ask why
+        // the figure is what it is -- usually while holding a different count.
+        model.addAttribute("movements", stockService.historyFor(id, HISTORY_SHOWN));
         model.addAttribute("heading", "Edit " + product.getName());
         return "admin/product-form";
     }
@@ -138,6 +154,13 @@ public class AdminProductController {
         form.applyTo(product);
         Product saved = productService.save(product);
 
+        // Stock is not part of applyTo: changing it here would move the figure
+        // with nothing in the ledger to explain it. A different number in the
+        // box is a stock take, and is recorded as one.
+        if (form.getStock() != saved.getStock()) {
+            saved = productService.setStock(saved.getId(), form.getStock(), principal.getName());
+        }
+
         log.info("Product {} updated by {}", id, Redact.email(principal.getName()));
         auditService.record(principal.getName(), AdminActionType.PRODUCT_UPDATED,
                 AuditService.PRODUCT, id,
@@ -158,7 +181,7 @@ public class AdminProductController {
                            RedirectAttributes flash) {
         try {
             int before = productService.getById(id).getStock();
-            Product product = productService.setStock(id, stock);
+            Product product = productService.setStock(id, stock, principal.getName());
             log.info("Stock for product {} set to {} by {}", id, stock, Redact.email(principal.getName()));
             auditService.record(principal.getName(), AdminActionType.STOCK_SET,
                     AuditService.PRODUCT, id,

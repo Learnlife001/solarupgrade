@@ -497,6 +497,36 @@ cheap.
 Two providers claiming the same `PaymentMethod` fails at startup. Otherwise one
 of them takes the money and which one depends on bean ordering.
 
+## Why the stock figure is what it is
+
+Stock was changed from four places — checkout, cancellation, refund and the
+back office — and three of them left no trace. The only recorded changes were
+the ones an administrator typed, so "I counted ten onto the shelf and it says
+three" had no answer. A stock number nobody can explain is one nobody trusts,
+and the usual next step is a spreadsheet kept alongside the system.
+
+Every change now goes through `StockService`, which writes a `stock_movements`
+row in the same transaction as the change. Recording is not a step a caller can
+forget, because there is no other way to alter the figure. The product's edit
+page shows the last twenty movements: when, why, the change, what it left, and
+who, with a link to the order behind it.
+
+Two details worth keeping:
+
+- **The resulting figure is stored, not derived.** Replaying every movement to
+  learn what stock was on Tuesday means trusting that no row is missing;
+  storing the result at each step makes a gap show up as an inconsistency
+  rather than quietly changing the answer.
+- **A new product is created empty and counted up.** Its opening stock is a
+  movement like any other, so the ledger begins with the row that put the units
+  there rather than a quantity that appeared from nowhere.
+
+The gap this nearly shipped with: the edit form set stock directly, so *saving
+a product* moved stock silently while the stock-take control beside it recorded
+properly. A figure that is sometimes explained is worse than one that never is,
+because it gets trusted. `ProductForm.applyTo` no longer touches stock at all,
+and a test covers the form route.
+
 ## Running the catalogue
 
 `/admin/products` creates, edits, restocks and retires products. Until this

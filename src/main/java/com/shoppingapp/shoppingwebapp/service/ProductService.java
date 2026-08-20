@@ -17,12 +17,14 @@ import java.util.NoSuchElementException;
 public class ProductService {
 
     private final ProductRepository productRepository;
+    private final StockService stockService;
 
     @PersistenceContext
     private EntityManager entityManager;
 
-    public ProductService(ProductRepository productRepository) {
+    public ProductService(ProductRepository productRepository, StockService stockService) {
         this.productRepository = productRepository;
+        this.stockService = stockService;
     }
 
     /** What the shop sells today. Archived products are not it. */
@@ -87,15 +89,17 @@ public class ProductService {
      * a sale and saved after it would silently undo that sale.
      */
     @Transactional
-    public Product setStock(Long id, int stock) {
+    public Product setStock(Long id, int stock, String actor) {
         if (stock < 0) {
             throw new IllegalArgumentException("Stock cannot be negative");
         }
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("No product with id " + id));
         entityManager.refresh(product, LockModeType.PESSIMISTIC_WRITE);
-        product.setStock(stock);
-        return productRepository.save(product);
+        // Through StockService, which records the difference the count made.
+        // A stock take that leaves no trace is why the figure could not be
+        // explained in the first place.
+        return stockService.countedAt(product, stock, actor);
     }
 
     /**

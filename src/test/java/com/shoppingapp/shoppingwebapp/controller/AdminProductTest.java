@@ -2,14 +2,17 @@ package com.shoppingapp.shoppingwebapp.controller;
 
 import com.shoppingapp.shoppingwebapp.model.Category;
 import com.shoppingapp.shoppingwebapp.model.Product;
+import com.shoppingapp.shoppingwebapp.model.StockMovementReason;
 import com.shoppingapp.shoppingwebapp.model.Role;
 import com.shoppingapp.shoppingwebapp.model.User;
 import com.shoppingapp.shoppingwebapp.repository.AdminActionRepository;
 import com.shoppingapp.shoppingwebapp.repository.ProductRepository;
+import com.shoppingapp.shoppingwebapp.repository.StockMovementRepository;
 import com.shoppingapp.shoppingwebapp.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Limit;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
@@ -52,6 +55,9 @@ class AdminProductTest {
     @Autowired
     private AdminActionRepository auditEntries;
 
+    @Autowired
+    private StockMovementRepository stockMovements;
+
     private Product panel;
 
     /** Marks the rows this class creates, so it can clear its own and no more. */
@@ -66,7 +72,13 @@ class AdminProductTest {
         // tests in this run are using.
         products.findAll().stream()
                 .filter(product -> product.getName().startsWith(TEST_PREFIX))
-                .forEach(products::delete);
+                .forEach(product -> {
+                    // The stock ledger points at the product row, so it goes
+                    // first. The application archives rather than deletes.
+                    stockMovements.deleteAll(stockMovements
+                            .findByProductIdOrderByHappenedAtDescIdDesc(product.getId(), Limit.of(1000)));
+                    products.delete(product);
+                });
 
         panel = products.save(new Product(TEST_PREFIX + "Panel", "A panel for the test.",
                 new BigDecimal("380000.00"), Category.PANEL, 5, "/images/panel-450w.svg"));
@@ -215,6 +227,60 @@ class AdminProductTest {
                 .anySatisfy(entry -> {
                     assertThat(entry.getActor()).isEqualTo(ADMIN);
                     assertThat(entry.getDetail()).contains("380,000").contains("399,000");
+                });
+    }
+
+    /**
+     * Every route that moves stock has to leave a movement behind. The edit
+     * form set the figure directly at first, so saving a product moved its
+     * stock silently while the stock-take control beside it recorded properly
+     * -- a figure that is sometimes explained is worse than one that never is,
+     * because it gets trusted.
+     */
+    @Test
+    void changingStockOnTheEditFormIsRecordedAsAStockTake() throws Exception {
+        mockMvc.perform(post("/admin/products/" + panel.getId())
+                .with(user(ADMIN).roles("ADMIN")).with(csrf())
+                .param("name", panel.getName())
+                .param("description", panel.getDescription())
+                .param("price", panel.getPrice().toPlainString())
+                .param("category", "PANEL")
+                .param("stock", "42")
+                .param("imageUrl", panel.getImageUrl()));
+
+        assertThat(products.findById(panel.getId()).orElseThrow().getStock()).isEqualTo(42);
+        assertThat(stockMovements
+                .findByProductIdOrderByHappenedAtDescIdDesc(panel.getId(), Limit.of(10)))
+                .anySatisfy(movement -> {
+                    assertThat(movement.getReason()).isEqualTo(StockMovementReason.STOCK_TAKE);
+                    assertThat(movement.getChange()).isEqualTo(37);
+                    assertThat(movement.getResultingStock()).isEqualTo(42);
+                    assertThat(movement.getActor()).isEqualTo(ADMIN);
+                });
+    }
+
+    /** A new product's opening figure is a movement, not a quantity from nowhere. */
+    @Test
+    void aNewProductsOpeningStockIsRecorded() throws Exception {
+        mockMvc.perform(post("/admin/products")
+                .with(user(ADMIN).roles("ADMIN")).with(csrf())
+                .param("name", TEST_PREFIX + "Opening")
+                .param("description", "Stock recorded from the first row.")
+                .param("price", "1000.00")
+                .param("category", "PANEL")
+                .param("stock", "8"));
+
+        Product created = products.findAll().stream()
+                .filter(product -> product.getName().equals(TEST_PREFIX + "Opening"))
+                .findFirst().orElseThrow();
+
+        assertThat(created.getStock()).isEqualTo(8);
+        assertThat(stockMovements
+                .findByProductIdOrderByHappenedAtDescIdDesc(created.getId(), Limit.of(10)))
+                .singleElement()
+                .satisfies(movement -> {
+                    assertThat(movement.getReason()).isEqualTo(StockMovementReason.STOCK_TAKE);
+                    assertThat(movement.getChange()).isEqualTo(8);
                 });
     }
 

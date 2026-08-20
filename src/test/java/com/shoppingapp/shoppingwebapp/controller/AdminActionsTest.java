@@ -11,6 +11,7 @@ import com.shoppingapp.shoppingwebapp.model.User;
 import com.shoppingapp.shoppingwebapp.repository.CartItemRepository;
 import com.shoppingapp.shoppingwebapp.repository.OrderRepository;
 import com.shoppingapp.shoppingwebapp.repository.ProductRepository;
+import com.shoppingapp.shoppingwebapp.repository.StockMovementRepository;
 import com.shoppingapp.shoppingwebapp.repository.UserRepository;
 import com.shoppingapp.shoppingwebapp.service.CartService;
 import com.shoppingapp.shoppingwebapp.service.EmailService;
@@ -18,6 +19,7 @@ import com.shoppingapp.shoppingwebapp.service.OrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Limit;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
@@ -63,6 +65,9 @@ class AdminActionsTest {
     private ProductRepository productRepository;
 
     @Autowired
+    private StockMovementRepository stockMovementRepository;
+
+    @Autowired
     private OrderRepository orderRepository;
 
     @Autowired
@@ -97,6 +102,11 @@ class AdminActionsTest {
         orderRepository.deleteAll(orderRepository.findByUserOrderByPlacedAtDesc(buyer));
         cartItemRepository.deleteAll(cartItemRepository.findByUser(buyer));
         userRepository.delete(buyer);
+        // The stock ledger points at the product row, so it goes first. The
+        // application never deletes a product -- it archives -- so this is
+        // test cleanup rather than something the shop does.
+        stockMovementRepository.deleteAll(stockMovementRepository
+                .findByProductIdOrderByHappenedAtDescIdDesc(panel.getId(), Limit.of(1000)));
         productRepository.deleteById(panel.getId());
     }
 
