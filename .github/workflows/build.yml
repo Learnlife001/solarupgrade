@@ -54,16 +54,21 @@ jobs:
       # and nobody learns the server was missing. This fails the run instead.
       - name: Check the PostgreSQL tests actually ran
         run: |
-          report=build/test-results/test/TEST-com.shoppingapp.shoppingwebapp.repository.PostgresSupplierSearchTest.xml
-          if [ ! -f "$report" ]; then
-            echo "No PostgreSQL test report at $report -- did the class get renamed?"
+          # Every class whose name says PostgreSQL, not one named file: a new
+          # one added later would otherwise skip silently and nothing would say
+          # so, which is the exact failure these tests exist to prevent.
+          reports=$(find build/test-results/test -name 'TEST-*Postgres*.xml' 2>/dev/null)
+          if [ -z "$reports" ]; then
+            echo "No PostgreSQL test reports found -- did the classes get renamed?"
             exit 1
           fi
-          if grep -q '<skipped' "$report"; then
-            echo "PostgreSQL tests were skipped; the service container was not reachable."
-            exit 1
-          fi
-          echo "PostgreSQL tests ran against the service container."
+          for report in $reports; do
+            if grep -q '<skipped' "$report"; then
+              echo "PostgreSQL tests were skipped in $report; the service container was not reachable."
+              exit 1
+            fi
+            echo "ran: $(basename "$report")"
+          done
 
       # Surfaces the failing assertions in the run summary rather than making
       # someone dig through the raw log.

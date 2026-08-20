@@ -1074,6 +1074,24 @@ input[type="number"].qty-input { width: 4.6rem; margin-top: 0; }
 }
 
 /* Wide tables scroll inside their own box rather than the page. */
+/* The order search, sat under the status filter row. */
+.admin-search {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .6rem;
+    margin: 0 0 1.25rem;
+}
+
+.admin-search input[type="search"] {
+    flex: 1 1 22rem;
+    max-width: 30rem;
+    margin: 0;
+}
+
+/* Labels are block-level elsewhere; inside this row they must not stack. */
+.admin-search label { margin: 0; }
+
 /* Newer / older, with the position between them. */
 .pager {
     display: flex;

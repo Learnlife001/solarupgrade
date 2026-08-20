@@ -90,14 +90,20 @@ public class AdminController {
 
     @GetMapping("/orders")
     public String orders(@RequestParam(required = false) OrderStatus status,
+                         @RequestParam(required = false) String q,
                          @RequestParam(defaultValue = "0") int page,
                          Model model) {
         // Paged rather than every order ever placed. The page looked fixed
         // while the work behind it grew with the shop: at a few thousand orders
         // this query alone would have made the back office unusable, and it is
         // the page whoever runs the shop lives in.
-        Page<Order> orders = orderService.ordersPage(status, OrderService.page(page, PAGE_SIZE));
+        //
+        // Searched, too: a customer writes in about an order and what the shop
+        // has is their address, their name or a number from an email. Browsing
+        // back through pages for it is not an answer.
+        Page<Order> orders = orderService.searchOrders(status, q, OrderService.page(page, PAGE_SIZE));
         model.addAttribute("orders", orders.getContent());
+        model.addAttribute("query", q == null ? "" : q.trim());
         model.addAttribute("pageNumber", orders.getNumber());
         model.addAttribute("totalPages", orders.getTotalPages());
         model.addAttribute("totalOrders", orders.getTotalElements());

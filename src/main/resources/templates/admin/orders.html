@@ -9,16 +9,41 @@
     <h1>Orders</h1>
     <div th:replace="~{admin/layout :: flash}"></div>
 
+    <!--
+      The status links keep whatever has been searched for, and the search box
+      keeps whichever status is selected. Either one clearing the other is the
+      usual bug in a filter row, and it looks like the search "not working".
+    -->
     <nav class="admin-filters">
-        <a th:href="@{/admin/orders}"
+        <a th:href="@{/admin/orders(q=${#strings.isEmpty(query)} ? null : ${query})}"
            th:classappend="${selectedStatus == null} ? 'is-current'">All</a>
         <a th:each="status : ${statuses}"
-           th:href="@{/admin/orders(status=${status})}"
+           th:href="@{/admin/orders(status=${status}, q=${#strings.isEmpty(query)} ? null : ${query})}"
            th:classappend="${selectedStatus != null and selectedStatus.name() == status.name()} ? 'is-current'"
            th:text="${status.displayName}">Status</a>
     </nav>
 
-    <p class="note" th:if="${#lists.isEmpty(orders)}">No orders here.</p>
+    <form class="admin-search" method="get" th:action="@{/admin/orders}">
+        <input type="hidden" name="status"
+               th:if="${selectedStatus != null}" th:value="${selectedStatus.name()}">
+        <label class="visually-hidden" for="q">Search orders</label>
+        <input type="search" id="q" name="q" th:value="${query}"
+               placeholder="Order number, email address or name">
+        <button type="submit" class="button-secondary button-small">Search</button>
+        <a th:if="${!#strings.isEmpty(query)}" class="link-button"
+           th:href="@{/admin/orders(status=${selectedStatus != null} ? ${selectedStatus.name()} : null)}">Clear</a>
+    </form>
+
+    <!--
+      Two different empty states. "Nothing matched" and "there is nothing here"
+      look the same on screen and mean opposite things to whoever is looking.
+    -->
+    <p class="note" th:if="${#lists.isEmpty(orders) and !#strings.isEmpty(query)}">
+        No order matches &ldquo;<span th:text="${query}">term</span>&rdquo;.
+        Searching looks at the order number, the customer&rsquo;s email address and
+        the name on the parcel.
+    </p>
+    <p class="note" th:if="${#lists.isEmpty(orders) and #strings.isEmpty(query)}">No orders here.</p>
 
     <table class="admin-table" th:unless="${#lists.isEmpty(orders)}">
         <thead>
@@ -51,7 +76,8 @@
     </table>
 
     <div th:replace="~{fragments/pager :: pager(${pageNumber}, ${totalPages}, '/admin/orders',
-                        ${selectedStatus != null} ? ${selectedStatus.name()} : null)}"></div>
+                        ${selectedStatus != null} ? ${selectedStatus.name()} : null,
+                        ${#strings.isEmpty(query)} ? null : ${query})}"></div>
 
     <p class="note">
         <span th:text="${totalOrders}">0</span> order(s) in total.

@@ -10,14 +10,15 @@
   order list is actually asked -- "what came in recently" -- is answered by
   page one.
 
-  The status filter is carried through, because paging a filtered list that
-  silently drops the filter on page two is worse than no paging at all. It is
-  passed as null when there is none, which Thymeleaf leaves out of the URL.
+  The status filter and the search term are carried through, because paging a
+  filtered list that silently drops the filter on page two is worse than no
+  paging at all. Each is passed as null when there is none, which Thymeleaf
+  leaves out of the URL.
 -->
-<nav th:fragment="pager(pageNumber, totalPages, baseUrl, status)"
+<nav th:fragment="pager(pageNumber, totalPages, baseUrl, status, query)"
      class="pager" th:if="${totalPages > 1}" aria-label="Pages">
     <a th:if="${pageNumber > 0}"
-       th:href="@{{base}(base=${baseUrl}, page=${pageNumber - 1}, status=${status})}"
+       th:href="@{{base}(base=${baseUrl}, page=${pageNumber - 1}, status=${status}, q=${query})}"
        class="button-secondary button-small">&larr; Newer</a>
     <span th:unless="${pageNumber > 0}" class="pager-end">&larr; Newer</span>
 
@@ -27,7 +28,7 @@
     </span>
 
     <a th:if="${pageNumber + 1 < totalPages}"
-       th:href="@{{base}(base=${baseUrl}, page=${pageNumber + 1}, status=${status})}"
+       th:href="@{{base}(base=${baseUrl}, page=${pageNumber + 1}, status=${status}, q=${query})}"
        class="button-secondary button-small">Older &rarr;</a>
     <span th:unless="${pageNumber + 1 < totalPages}" class="pager-end">Older &rarr;</span>
 </nav>

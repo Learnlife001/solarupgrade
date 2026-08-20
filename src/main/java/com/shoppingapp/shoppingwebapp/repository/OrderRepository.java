@@ -70,6 +70,41 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("select o.id from Order o where o.status = :status")
     Page<Long> pageOrderIdsByStatus(@Param("status") OrderStatus status, Pageable pageable);
 
+    /**
+     * The admin search: order number, the customer's address, or the name on
+     * the parcel. Those are the three things somebody has in front of them
+     * when they go looking -- an email asking where an order is, a note with a
+     * number on it, or a name.
+     *
+     * <p>The term is an empty string when unused, never null. A null inside
+     * {@code lower()} has no type for PostgreSQL to infer and the statement
+     * fails with "function lower(bytea) does not exist" -- which H2 accepts,
+     * so it passed every test and broke only in production the last time.
+     *
+     * <p>The count query is spelled out rather than derived, because a derived
+     * one guesses at the shape of the select and the guess is worth not
+     * relying on for the number that decides how many pages there are.
+     */
+    @Query(value = """
+            select o.id from Order o
+            where (:status is null or o.status = :status)
+              and (:term = ''
+                   or lower(o.user.email) like lower(concat('%', :term, '%'))
+                   or lower(o.shippingName) like lower(concat('%', :term, '%'))
+                   or str(o.id) = :term)
+            """,
+            countQuery = """
+            select count(o.id) from Order o
+            where (:status is null or o.status = :status)
+              and (:term = ''
+                   or lower(o.user.email) like lower(concat('%', :term, '%'))
+                   or lower(o.shippingName) like lower(concat('%', :term, '%'))
+                   or str(o.id) = :term)
+            """)
+    Page<Long> searchOrderIds(@Param("status") OrderStatus status,
+                              @Param("term") String term,
+                              Pageable pageable);
+
     @Query("select o.id from Order o where o.user = :user")
     Page<Long> pageOrderIdsByUser(@Param("user") User user, Pageable pageable);
 

@@ -285,6 +285,20 @@ public class OrderService {
         return fetch(ids, pageable);
     }
 
+    /**
+     * The admin list with a search term as well as a status.
+     *
+     * <p>A blank search is not a search: it becomes an empty string, which the
+     * query treats as "no term" rather than as something to match. Passing null
+     * would break the query on PostgreSQL; see
+     * {@link OrderRepository#searchOrderIds}.
+     */
+    public Page<Order> searchOrders(OrderStatus status, String term, Pageable pageable) {
+        Page<Long> ids = orderRepository.searchOrderIds(
+                status, term == null ? "" : term.trim(), pageable);
+        return fetch(ids, pageable);
+    }
+
     /** The same, for one customer's own history. */
     public Page<Order> ordersPageFor(User user, Pageable pageable) {
         return fetch(orderRepository.pageOrderIdsByUser(user, pageable), pageable);

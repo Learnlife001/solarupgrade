@@ -324,6 +324,23 @@ schema has nowhere to put one.
 **These pages have not been reviewed by a lawyer,** and every one of them says
 so. They are a solid starting point, not advice.
 
+## Finding an order
+
+`/admin/orders` searches by order number, the customer's email address, or the
+name on the parcel — the three things somebody actually has in front of them
+when they go looking: a number quoted in an email, the address it came from, or
+a name. Paging back through a list is not an answer to any of them.
+
+The status filter and the search narrow together. Each control keeps the
+other's state, because a filter row where one silently clears the other reads
+as the search not working.
+
+The query has the same shape that took `/suppliers` down — a term inside
+`lower()` and a nullable enum filter — so `PostgresOrderSearchTest` runs it
+against a real server across every combination of both. The CI check now looks
+for *every* report named `Postgres*` rather than one file, so a class added
+later cannot skip silently.
+
 ## Long lists are paged
 
 `/admin/orders` used to load every order ever placed into one page. It looked
