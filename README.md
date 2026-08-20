@@ -508,6 +508,28 @@ page that says the thing is gone. The basket is deliberately excluded: someone
 clicking "add to basket" on a tab opened before the product was retired gets a
 sentence explaining why nothing happened, not a 404.
 
+## The scheduled jobs
+
+Two run on a timer: one nudges an unpaid order once, the other releases the
+stock an unpaid order is holding. Both used to be `@Transactional` across their
+whole loop, which had two consequences nobody would choose:
+
+- **One order that threw rolled back the whole run.** For the reminder job that
+  meant clearing the "already chased" flag on customers who had just been
+  emailed — so the next run emailed them again. A job whose failure mode is
+  chasing the same people twice is worse than one that skips an order.
+- **It failed the same way every hour**, because each run started at the same
+  order, while unpaid orders held stock that was never released.
+
+Each order is now its own transaction, and one that fails is reported and
+stepped over. `JobResilienceTest` poisons one order in the middle of a run and
+checks the others still completed; it fails on the old code.
+
+**A failing job raises an alert.** `ErrorAlertResolver` watches requests through
+the dispatcher and a scheduled job has none, so a job could fail every hour for
+a week with nothing but a log line to show for it — and unlike a broken page,
+there is no customer there to notice.
+
 ## When something breaks
 
 `/suppliers` returned a 500 to every visitor for twenty-five minutes and the

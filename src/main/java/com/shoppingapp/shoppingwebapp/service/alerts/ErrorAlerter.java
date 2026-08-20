@@ -96,6 +96,73 @@ public class ErrorAlerter {
     }
 
     /**
+     * Reports a scheduled job that threw.
+     *
+     * <p>Nothing else does. {@code ErrorAlertResolver} watches requests through
+     * the dispatcher, and a job has none -- so the reminder job could fail
+     * every hour for a week with the only trace a log line nobody reads, while
+     * unpaid orders held stock that was never released. A job failing is
+     * quieter than a page failing and matters for longer, because no customer
+     * is there to notice.
+     *
+     * @param what the piece of work that failed, which is also what groups it:
+     *             one broken order must not silence a report of the whole job
+     *             falling over
+     */
+    public void jobFailed(String jobName, String what, Throwable error) {
+        try {
+            if (!enabled || recipients.isEmpty() || error == null) {
+                return;
+            }
+            String signature = "job:" + jobName + ":" + what + ":" + rootCause(error).getClass().getName();
+            AlertBudget.Decision decision = budget.record(signature, Instant.now());
+            if (!decision.send()) {
+                return;
+            }
+            sendJob(jobName, what, rootCause(error), decision.alsoSuppressed());
+        } catch (Exception ex) {
+            log.warn("Could not raise a job alert", ex);
+        }
+    }
+
+    private void sendJob(String jobName, String what, Throwable root, int alsoSuppressed) {
+        String subject = "[" + brand.getName() + "] " + jobName + " failed: "
+                + root.getClass().getSimpleName();
+
+        StringBuilder detail = new StringBuilder();
+        detail.append(EmailHtml.heading("A scheduled job failed"))
+                .append(EmailHtml.lead("<strong>" + escape(jobName) + "</strong> failed on "
+                        + escape(what) + ". Nobody is watching a job the way somebody watches "
+                        + "a page, so it will keep failing until it is looked at."));
+        if (alsoSuppressed > 0) {
+            detail.append(EmailHtml.paragraph("<strong>" + alsoSuppressed
+                    + " more</strong> of these were not reported while it was quiet."));
+        }
+        detail.append(EmailHtml.divider())
+                .append(EmailHtml.sectionTitle("What broke"))
+                .append(EmailHtml.paragraph("<strong>" + escape(root.getClass().getName()) + "</strong><br>"
+                        + escape(root.getMessage() == null ? "(no message)" : root.getMessage())))
+                .append(EmailHtml.sectionTitle("Where"))
+                .append("<pre style=\"margin:0;padding:14px;background:" + EmailHtml.SURFACE_2
+                        + ";border-radius:10px;overflow-x:auto;font:400 12px/1.6 ui-monospace,"
+                        + "SFMono-Regular,Menlo,Consolas,monospace;color:" + EmailHtml.INK + ";\">"
+                        + escape(frames(root)) + "</pre>");
+
+        String html = EmailHtml.document(brand.getName(), brand.getMark(), brand.getTagline(),
+                "A scheduled job failed", jobName + " failed", null, detail.toString(),
+                "You receive this because you are listed in app.alerts.recipients.");
+
+        String text = jobName + " failed on " + what + ".\n\n"
+                + root.getClass().getName() + "\n"
+                + (root.getMessage() == null ? "(no message)" : root.getMessage()) + "\n\n"
+                + frames(root) + "\n";
+
+        for (String recipient : recipients) {
+            email.sendOperationalAlert(recipient, subject, text, html);
+        }
+    }
+
+    /**
      * What counts as "the same error".
      *
      * <p>The path, the exception type and the first frame of our own code. Not

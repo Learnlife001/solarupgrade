@@ -3,13 +3,13 @@ package com.shoppingapp.shoppingwebapp.service;
 import com.shoppingapp.shoppingwebapp.model.Order;
 import com.shoppingapp.shoppingwebapp.model.OrderStatus;
 import com.shoppingapp.shoppingwebapp.repository.OrderRepository;
+import com.shoppingapp.shoppingwebapp.service.alerts.ErrorAlerter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -42,13 +42,16 @@ public class OrderExpiryJob {
 
     private final OrderRepository orderRepository;
     private final OrderService orderService;
+    private final ErrorAlerter alerter;
     private final Duration after;
 
     public OrderExpiryJob(OrderRepository orderRepository,
                           OrderService orderService,
+                          ErrorAlerter alerter,
                           @Value("${app.order-expiry.after-hours:72}") long afterHours) {
         this.orderRepository = orderRepository;
         this.orderService = orderService;
+        this.alerter = alerter;
         this.after = Duration.ofHours(afterHours);
     }
 
@@ -56,9 +59,21 @@ public class OrderExpiryJob {
      * Hourly. The delay before an order lapses is set by the cutoff, not by
      * how often this looks.
      */
+    /**
+     * Deliberately <b>not</b> {@code @Transactional}.
+     *
+     * <p>It used to be, which put every order in the run inside one
+     * transaction: a single order that threw took the whole run with it and
+     * rolled back the ones already released. The orders most likely to throw
+     * are the odd ones, so the failure mode was the shop's stock staying locked
+     * up because of one strange row -- for ever, since the next run began at
+     * the same order and failed the same way.
+     *
+     * <p>Each order is now its own transaction, inside {@code cancelUnpaid},
+     * and one that fails is reported and stepped over.
+     */
     @Scheduled(fixedDelayString = "${app.order-expiry.interval-ms:3600000}",
             initialDelayString = "${app.order-expiry.initial-delay-ms:120000}")
-    @Transactional
     public void expireStaleOrders() {
         Instant cutoff = Instant.now().minus(after);
         List<Order> stale = orderRepository
@@ -69,13 +84,23 @@ public class OrderExpiryJob {
         }
 
         log.info("Releasing stock from {} unpaid order(s) older than {}h", stale.size(), after.toHours());
+        int failed = 0;
         for (Order order : stale) {
-            // By id, and the service re-reads it: the guard inside cancelUnpaid
-            // then runs against the row as it is now, not as this query saw it,
-            // so an order paid in between is left alone. The notification is
-            // sent from there too, so both routes to a cancellation tell the
-            // customer the same thing.
-            orderService.cancelUnpaid(order.getId());
+            try {
+                // By id, and the service re-reads it: the guard inside
+                // cancelUnpaid then runs against the row as it is now, not as
+                // this query saw it, so an order paid in between is left alone.
+                // The notification is sent from there too, so both routes to a
+                // cancellation tell the customer the same thing.
+                orderService.cancelUnpaid(order.getId());
+            } catch (Exception ex) {
+                failed++;
+                log.error("Could not expire order {}", order.getId(), ex);
+                alerter.jobFailed("Order expiry", "order #" + order.getId(), ex);
+            }
+        }
+        if (failed > 0) {
+            log.warn("Order expiry finished with {} of {} order(s) failing", failed, stale.size());
         }
     }
 }
