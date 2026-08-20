@@ -6,7 +6,14 @@
 <div th:replace="~{admin/layout :: header}"></div>
 
 <main class="container">
-    <h1>Orders</h1>
+    <div class="admin-head">
+        <h1>Orders</h1>
+        <!--
+          Every order as a file: what an accountant is given, and the only copy
+          of the trading history that lives outside the database.
+        -->
+        <a class="button-secondary" th:href="@{/admin/orders.csv}">Download all as CSV</a>
+    </div>
     <div th:replace="~{admin/layout :: flash}"></div>
 
     <!--

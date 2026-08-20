@@ -4,11 +4,20 @@ import com.shoppingapp.shoppingwebapp.model.AdminActionType;
 import com.shoppingapp.shoppingwebapp.model.Order;
 import com.shoppingapp.shoppingwebapp.model.OrderStatus;
 import com.shoppingapp.shoppingwebapp.service.AuditService;
+import com.shoppingapp.shoppingwebapp.service.OrderExportService;
 import com.shoppingapp.shoppingwebapp.service.OrderService;
 import com.shoppingapp.shoppingwebapp.service.ProductService;
 import com.shoppingapp.shoppingwebapp.service.payment.PaymentException;
 import com.shoppingapp.shoppingwebapp.service.payment.PaymentService;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
@@ -52,15 +61,18 @@ public class AdminController {
     private final ProductService productService;
     private final AuditService auditService;
     private final PaymentService paymentService;
+    private final OrderExportService orderExportService;
 
     public AdminController(OrderService orderService,
                            ProductService productService,
                            AuditService auditService,
-                           PaymentService paymentService) {
+                           PaymentService paymentService,
+                           OrderExportService orderExportService) {
         this.orderService = orderService;
         this.productService = productService;
         this.auditService = auditService;
         this.paymentService = paymentService;
+        this.orderExportService = orderExportService;
     }
 
     @GetMapping
@@ -110,6 +122,40 @@ public class AdminController {
         model.addAttribute("selectedStatus", status);
         model.addAttribute("statuses", OrderStatus.values());
         return "admin/orders";
+    }
+
+    /**
+     * Every order as a CSV file.
+     *
+     * <p>What an accountant is handed at the end of a quarter, and the only
+     * copy of the shop's trading history that exists anywhere but the database
+     * -- which sits on a free plan in a project that can be deleted with one
+     * click.
+     *
+     * <p>Streamed rather than built in memory, and audited: this is a bulk read
+     * of every customer's name and address, and a record of who took a copy and
+     * when is the least that deserves.
+     */
+    @GetMapping("/orders.csv")
+    public ResponseEntity<StreamingResponseBody> exportOrders(Principal principal) {
+        String filename = orderExportService.filename();
+        log.info("Order export taken by {}", principal.getName());
+        auditService.record(principal.getName(), AdminActionType.ORDERS_EXPORTED,
+                AuditService.ORDER, "Downloaded " + filename);
+
+        StreamingResponseBody body = out -> {
+            try (Writer writer = new OutputStreamWriter(out, StandardCharsets.UTF_8)) {
+                long written = orderExportService.writeTo(writer);
+                log.info("Exported {} orders", written);
+            }
+        };
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                // UTF-8 named explicitly: without it a spreadsheet guesses, and
+                // guesses wrong on any address with an accent in it.
+                .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+                .body(body);
     }
 
     @GetMapping("/orders/{id}")

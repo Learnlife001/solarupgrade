@@ -35,6 +35,15 @@ public class AuditService {
         actions.save(new AdminAction(actor, action, targetType, targetId, detail));
     }
 
+    /**
+     * An action with no single row behind it, such as exporting every order.
+     * Its own method so a caller never has to pass a null and wonder whether
+     * that was allowed.
+     */
+    public void record(String actor, AdminActionType action, String targetType, String detail) {
+        record(actor, action, targetType, null, detail);
+    }
+
     /** Newest first, for the dashboard. */
     public List<AdminAction> recent(int limit) {
         return actions.findByOrderByHappenedAtDesc(Limit.of(limit));

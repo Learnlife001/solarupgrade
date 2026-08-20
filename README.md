@@ -324,6 +324,36 @@ schema has nowhere to put one.
 **These pages have not been reviewed by a lawyer,** and every one of them says
 so. They are a solid starting point, not advice.
 
+## Taking a copy of the orders
+
+`/admin/orders.csv` downloads every order. It is what an accountant is handed
+at the end of a quarter, and it is the only copy of the shop's trading history
+that exists anywhere but the database — which sits on a free hosting plan, in a
+project that can be deleted with one click. A backup you have to remember to
+take is a poor backup; it still beats not having one.
+
+**Formula injection is neutralised.** Excel, LibreOffice and Sheets all
+evaluate a cell that begins with `=`, `+`, `-` or `@` when the file is opened.
+Every name and address in this file was typed by a customer, so without care
+the shop's own export is a way for whoever placed an order to run something on
+the owner's machine — and quoting does not help, because the spreadsheet strips
+the quotes before evaluating. Each field is prefixed with an apostrophe when it
+starts with one of those characters, which spreadsheets read as "this is text"
+and do not display. `CsvTest` covers each starter, and `OrderExportTest` places
+a real order named `=HYPERLINK(...)` and checks it comes out inert.
+
+**Written a page at a time and streamed**, so the export does not have to hold
+every order in memory — which would fail on exactly the shop that most needs a
+backup.
+
+**Taking a copy is audited.** It is a bulk read of every customer's name and
+address, so who took one and when is recorded. That also meant letting an audit
+entry have no single target row: inventing an order id for it, or not recording
+it at all, would each have been worse than a nullable column.
+
+The file holds personal data — names, addresses, email addresses. Wherever it
+is put is now somewhere customer data lives, and it should be treated that way.
+
 ## Finding an order
 
 `/admin/orders` searches by order number, the customer's email address, or the

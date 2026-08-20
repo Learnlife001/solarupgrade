@@ -51,7 +51,11 @@ public class AdminAction {
     @Column(nullable = false, length = 32)
     private String targetType;
 
-    @Column(nullable = false)
+    /**
+     * Null for an action that is not about one row -- exporting every order,
+     * for instance. Inventing an id for those, or leaving them unrecorded,
+     * would each be worse than a column that admits the case.
+     */
     private Long targetId;
 
     /** What changed, in words, for a human reading the history later. */
