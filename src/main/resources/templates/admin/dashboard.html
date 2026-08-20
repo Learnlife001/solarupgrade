@@ -72,6 +72,17 @@
             </tr>
             </tbody>
         </table>
+
+        <!--
+          The dashboard shows the oldest few, not all of them. A to-do list
+          that renders a thousand rows is one nobody opens, and the count says
+          how many are really waiting.
+        -->
+        <p class="note" th:if="${toShipTotal > #lists.size(toShip)}">
+            Showing <span th:text="${#lists.size(toShip)}">0</span>
+            of <span th:text="${toShipTotal}">0</span> waiting to dispatch.
+            <a th:href="@{/admin/orders(status='PAID')}">See them all</a>.
+        </p>
     </section>
 
     <!--

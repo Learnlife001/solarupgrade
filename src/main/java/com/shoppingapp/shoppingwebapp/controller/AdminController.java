@@ -8,6 +8,7 @@ import com.shoppingapp.shoppingwebapp.service.OrderService;
 import com.shoppingapp.shoppingwebapp.service.ProductService;
 import com.shoppingapp.shoppingwebapp.service.payment.PaymentException;
 import com.shoppingapp.shoppingwebapp.service.payment.PaymentService;
+import org.springframework.data.domain.Page;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
@@ -41,6 +42,9 @@ public class AdminController {
 
     private static final Logger log = LoggerFactory.getLogger(AdminController.class);
 
+    /** How many "waiting to ship" rows the dashboard shows before linking on. */
+    private static final int DASHBOARD_ROWS = 10;
+
     /** Below this, a product is worth flagging on the dashboard. */
     private static final int LOW_STOCK = 3;
 
@@ -70,17 +74,33 @@ public class AdminController {
 
         // Paid but not yet shipped is the actual to-do list: someone has paid
         // and is waiting. It leads the page for that reason.
-        model.addAttribute("toShip", orderService.ordersWithStatus(OrderStatus.PAID));
+        //
+        // Capped, and the count beside it says how many there are in total. A
+        // dashboard that renders a thousand rows is a dashboard nobody opens,
+        // and the full list is one click away.
+        Page<Order> toShip = orderService.ordersPage(OrderStatus.PAID, OrderService.page(0, DASHBOARD_ROWS));
+        model.addAttribute("toShip", toShip.getContent());
+        model.addAttribute("toShipTotal", toShip.getTotalElements());
         model.addAttribute("recentActions", auditService.recent(10));
         return "admin/dashboard";
     }
 
+    /** Orders per page. Enough to work from, few enough to render quickly. */
+    private static final int PAGE_SIZE = 25;
+
     @GetMapping("/orders")
-    public String orders(@RequestParam(required = false) OrderStatus status, Model model) {
-        List<Order> orders = status == null
-                ? orderService.allOrders()
-                : orderService.ordersWithStatus(status);
-        model.addAttribute("orders", orders);
+    public String orders(@RequestParam(required = false) OrderStatus status,
+                         @RequestParam(defaultValue = "0") int page,
+                         Model model) {
+        // Paged rather than every order ever placed. The page looked fixed
+        // while the work behind it grew with the shop: at a few thousand orders
+        // this query alone would have made the back office unusable, and it is
+        // the page whoever runs the shop lives in.
+        Page<Order> orders = orderService.ordersPage(status, OrderService.page(page, PAGE_SIZE));
+        model.addAttribute("orders", orders.getContent());
+        model.addAttribute("pageNumber", orders.getNumber());
+        model.addAttribute("totalPages", orders.getTotalPages());
+        model.addAttribute("totalOrders", orders.getTotalElements());
         model.addAttribute("selectedStatus", status);
         model.addAttribute("statuses", OrderStatus.values());
         return "admin/orders";

@@ -3,10 +3,15 @@ package com.shoppingapp.shoppingwebapp.repository;
 import com.shoppingapp.shoppingwebapp.model.Order;
 import com.shoppingapp.shoppingwebapp.model.OrderStatus;
 import com.shoppingapp.shoppingwebapp.model.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -45,6 +50,31 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     @EntityGraph(attributePaths = {"items", "items.product", "user"})
     List<Order> findByStatusOrderByPlacedAtDesc(OrderStatus status);
+
+    /*
+     * Paging, in two steps.
+     *
+     * A Pageable on a query that fetches a collection does not page in SQL.
+     * Hibernate fetches every matching row, joins the items, and applies the
+     * offset and limit in memory -- warning HHH90003004 as it goes -- which is
+     * the opposite of what paging is for: the page looks fixed while the
+     * database work grows with every order ever placed.
+     *
+     * So the ids are paged on their own, where there is no collection to join,
+     * and then that page of ids is fetched with the graph the templates need.
+     * Two queries, both bounded.
+     */
+    @Query("select o.id from Order o")
+    Page<Long> pageOrderIds(Pageable pageable);
+
+    @Query("select o.id from Order o where o.status = :status")
+    Page<Long> pageOrderIdsByStatus(@Param("status") OrderStatus status, Pageable pageable);
+
+    @Query("select o.id from Order o where o.user = :user")
+    Page<Long> pageOrderIdsByUser(@Param("user") User user, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"items", "items.product", "user"})
+    List<Order> findByIdInOrderByPlacedAtDesc(Collection<Long> ids);
 
     @EntityGraph(attributePaths = {"items", "items.product", "user"})
     Optional<Order> findWithItemsById(Long id);

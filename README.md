@@ -324,6 +324,25 @@ schema has nowhere to put one.
 **These pages have not been reviewed by a lawyer,** and every one of them says
 so. They are a solid starting point, not advice.
 
+## Long lists are paged
+
+`/admin/orders` used to load every order ever placed into one page. It looked
+fine at a dozen and would have made the back office unusable at a few thousand
+— on the page whoever runs the shop spends their day. Customers' own histories
+had the same shape, and the dashboard's "to dispatch" list still shows the
+oldest ten with a count and a link rather than all of them.
+
+**Paged in two queries, on purpose.** A `Pageable` on a query that fetches a
+collection does not page in SQL: Hibernate loads every matching row, joins the
+items, and applies the offset in memory, warning `HHH90003004` as it goes. The
+page would look right while the database work still grew with the shop. So the
+ids are paged on their own, where there is no collection to join, and that page
+of ids is then fetched with the graph the templates need.
+
+The pager carries the status filter through. A filtered list that drops its
+filter on page two shows a different list than the one being read, which is
+worse than not paging at all.
+
 ## Refunds
 
 A paid order can be refunded in full from `/admin/orders/{id}`. The provider is
@@ -1122,6 +1141,19 @@ src/main/resources/
   static/js/    theme.js -- sets the theme before first paint, so not deferred
                 app.js   -- progressive enhancement only, never required
 ```
+
+## Licence
+
+`LICENSE` is **proprietary — all rights reserved**. That is the deliberate
+default for something built to be sold: it keeps every option open, including
+granting a buyer whatever terms are agreed later. An open-source licence cannot
+be taken back once published, so it is not the thing to pick by accident.
+
+Two consequences worth knowing. Nobody may use this code without a written
+agreement, including anyone who can see the repository. And the copyright line
+names "the copyright holder of this repository" rather than a person or company
+— replace it with the real name once the business is registered, because a
+licence that cannot say who grants it is weaker than one that can.
 
 ## Known gaps
 

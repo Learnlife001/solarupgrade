@@ -1074,6 +1074,22 @@ input[type="number"].qty-input { width: 4.6rem; margin-top: 0; }
 }
 
 /* Wide tables scroll inside their own box rather than the page. */
+/* Newer / older, with the position between them. */
+.pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin: 1.75rem 0 .5rem;
+    font-size: .88rem;
+}
+
+.pager-position { color: var(--ink-2); }
+
+/* The end of the list, shown rather than hidden so the controls do not move
+   about as somebody pages through. */
+.pager-end { color: var(--ink-3, var(--ink-2)); opacity: .5; }
+
 /* Page title with its primary action opposite, for admin lists that create. */
 .admin-head {
     display: flex;

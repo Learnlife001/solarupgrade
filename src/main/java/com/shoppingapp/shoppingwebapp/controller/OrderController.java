@@ -36,9 +36,21 @@ public class OrderController {
         this.paymentService = paymentService;
     }
 
+    /** Orders per page in a customer's own history. */
+    private static final int PAGE_SIZE = 20;
+
     @GetMapping
-    public String list(Principal principal, Model model) {
-        model.addAttribute("orders", orderService.ordersFor(currentUser.require(principal)));
+    public String list(@RequestParam(defaultValue = "0") int page,
+                       Principal principal,
+                       Model model) {
+        // Paged for the same reason the admin list is, if less urgently: a
+        // customer's history only grows, and a regular buyer is the one whose
+        // page slows down.
+        org.springframework.data.domain.Page<Order> orders = orderService.ordersPageFor(
+                currentUser.require(principal), OrderService.page(page, PAGE_SIZE));
+        model.addAttribute("orders", orders.getContent());
+        model.addAttribute("pageNumber", orders.getNumber());
+        model.addAttribute("totalPages", orders.getTotalPages());
         return "orders";
     }
 

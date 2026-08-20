@@ -52,6 +52,8 @@
             </tbody>
         </table>
     </div>
+
+    <div th:replace="~{fragments/pager :: pager(${pageNumber}, ${totalPages}, '/orders', null)}"></div>
 </main>
 
 <div th:replace="~{fragments/layout :: footer}"></div>

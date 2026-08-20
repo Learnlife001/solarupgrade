@@ -12,6 +12,11 @@ import com.shoppingapp.shoppingwebapp.repository.ProductRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.PersistenceContext;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -256,6 +261,41 @@ public class OrderService {
 
     public List<Order> ordersWithStatus(OrderStatus status) {
         return orderRepository.findByStatusOrderByPlacedAtDesc(status);
+    }
+
+    /** Newest first, which is the only order these lists are ever wanted in. */
+    private static final Sort NEWEST_FIRST = Sort.by(Sort.Direction.DESC, "placedAt");
+
+    public static Pageable page(int page, int size) {
+        return PageRequest.of(Math.max(page, 0), size, NEWEST_FIRST);
+    }
+
+    /**
+     * One page of orders, optionally of one status.
+     *
+     * <p>The ids are paged first and the entities fetched second; see
+     * {@link OrderRepository#pageOrderIds}. Doing it in one query with a fetch
+     * graph would page in memory after loading everything, which is what this
+     * exists to stop.
+     */
+    public Page<Order> ordersPage(OrderStatus status, Pageable pageable) {
+        Page<Long> ids = status == null
+                ? orderRepository.pageOrderIds(pageable)
+                : orderRepository.pageOrderIdsByStatus(status, pageable);
+        return fetch(ids, pageable);
+    }
+
+    /** The same, for one customer's own history. */
+    public Page<Order> ordersPageFor(User user, Pageable pageable) {
+        return fetch(orderRepository.pageOrderIdsByUser(user, pageable), pageable);
+    }
+
+    private Page<Order> fetch(Page<Long> ids, Pageable pageable) {
+        if (ids.isEmpty()) {
+            return new PageImpl<>(List.of(), pageable, ids.getTotalElements());
+        }
+        List<Order> orders = orderRepository.findByIdInOrderByPlacedAtDesc(ids.getContent());
+        return new PageImpl<>(orders, pageable, ids.getTotalElements());
     }
 
     /**
