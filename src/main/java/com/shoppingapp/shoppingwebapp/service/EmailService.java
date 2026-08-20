@@ -408,6 +408,17 @@ public class EmailService {
      * SimpleMailMessage this used to build, because SimpleMailMessage can only
      * carry one body and it is always plain text.
      */
+    /**
+     * An operational message to whoever runs the shop, not to a customer.
+     *
+     * <p>Same transport, different audience: this is how {@code ErrorAlerter}
+     * reports a failed request. Kept here so there is still exactly one place
+     * that knows how mail leaves this application.
+     */
+    public void sendOperationalAlert(String to, String subject, String text, String html) {
+        send(to, subject, text, html, "error alert to " + Redact.email(to));
+    }
+
     private void send(String to, String subject, String text, String html, String description) {
         ResendMailer resend = resendProvider.getIfAvailable();
         JavaMailSender mailSender = mailSenderProvider.getIfAvailable();

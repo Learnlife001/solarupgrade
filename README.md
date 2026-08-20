@@ -324,6 +324,40 @@ schema has nowhere to put one.
 **These pages have not been reviewed by a lawyer,** and every one of them says
 so. They are a solid starting point, not advice.
 
+## When something breaks
+
+`/suppliers` returned a 500 to every visitor for twenty-five minutes and the
+way anybody found out was a customer sending a screenshot. The stack trace was
+in the logs the whole time, on a dashboard nobody was watching, which is the
+same as not having it.
+
+So a failed request now emails whoever runs the shop: what broke, where, and
+the frames from our own code that say which file to open. Recipients come from
+`APP_ALERTS_RECIPIENTS`, defaulting to the administrators; with none set it
+does nothing, so a deployment is never held up by it.
+
+**Two limits, because alerting on everything is how alerting gets ignored.**
+One fault stays quiet for 30 minutes after it is reported — you already know —
+and no more than 10 alerts go out in any rolling hour whatever breaks. The
+second is for what the first cannot cover: a bad deploy breaks many *different*
+things at once, each a fresh fault with a fresh right to email, and a free mail
+quota does not survive that. Nothing is lost while quiet: suppressed
+occurrences are counted and the next email says how many there were.
+
+**A 404 is not an alert.** A missing page or a bad parameter is the request
+being wrong, not the shop being broken, and Spring models both as exceptions.
+Alerting on them fills the inbox with crawler traffic.
+
+This is not a monitoring product — no dashboard, no grouping across deploys, no
+trends. It is the difference between finding out in a minute and finding out
+when a customer bothers to tell you, and it needs no account anywhere. Sentry
+or its like is the upgrade once the shop is busy enough to want the trends.
+
+**It watches without handling.** `ErrorAlertResolver` is a
+`HandlerExceptionResolver` that always returns null, so Spring carries on to
+the existing error page exactly as before. It does not see failures thrown by
+servlet filters, which run before the dispatcher — those still reach the logs.
+
 ## The German supplier directory
 
 `/suppliers`, public, no account needed. A searchable list of German solar

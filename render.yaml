@@ -122,6 +122,23 @@ services:
       - key: APP_ADMIN_HOST
         sync: false
 
+      # --- Error alerts -----------------------------------------------------
+      # Emails when a page fails. The /suppliers outage was found by a customer
+      # taking a screenshot; the stack trace had been in the logs the whole
+      # time, on a dashboard nobody was watching.
+      #
+      # Unset means alerts go to APP_ADMIN_EMAILS. Set this only to send them
+      # somewhere else -- an ops address, or several.
+      - key: APP_ALERTS_RECIPIENTS
+        sync: false
+      # One fault stays quiet this long after being reported, and no more than
+      # this many alerts go out in any hour whatever breaks. Both exist so the
+      # alerts stay readable: an inbox nobody opens is worse than no alerts.
+      - key: APP_ALERTS_COOLDOWN_MINUTES
+        value: "30"
+      - key: APP_ALERTS_MAX_PER_HOUR
+        value: "10"
+
       # --- Brand ------------------------------------------------------------
       # The name on the shop, in one place. Unset uses the defaults in
       # application.properties, which keep it working out of the box.
