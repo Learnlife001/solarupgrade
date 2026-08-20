@@ -7,6 +7,7 @@ import com.shoppingapp.shoppingwebapp.model.Product;
 import com.shoppingapp.shoppingwebapp.service.AuditService;
 import com.shoppingapp.shoppingwebapp.service.ProductImages;
 import com.shoppingapp.shoppingwebapp.service.ProductService;
+import com.shoppingapp.shoppingwebapp.support.Redact;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -100,7 +101,7 @@ public class AdminProductController {
         }
 
         Product saved = productService.save(form.toNewProduct());
-        log.info("Product {} created by {}", saved.getId(), principal.getName());
+        log.info("Product {} created by {}", saved.getId(), Redact.email(principal.getName()));
         auditService.record(principal.getName(), AdminActionType.PRODUCT_CREATED,
                 AuditService.PRODUCT, saved.getId(),
                 saved.getName() + " at " + saved.getPriceDisplay() + ", " + saved.getStock() + " in stock");
@@ -137,7 +138,7 @@ public class AdminProductController {
         form.applyTo(product);
         Product saved = productService.save(product);
 
-        log.info("Product {} updated by {}", id, principal.getName());
+        log.info("Product {} updated by {}", id, Redact.email(principal.getName()));
         auditService.record(principal.getName(), AdminActionType.PRODUCT_UPDATED,
                 AuditService.PRODUCT, id,
                 before + " to " + saved.getName() + " at " + saved.getPriceDisplay());
@@ -158,7 +159,7 @@ public class AdminProductController {
         try {
             int before = productService.getById(id).getStock();
             Product product = productService.setStock(id, stock);
-            log.info("Stock for product {} set to {} by {}", id, stock, principal.getName());
+            log.info("Stock for product {} set to {} by {}", id, stock, Redact.email(principal.getName()));
             auditService.record(principal.getName(), AdminActionType.STOCK_SET,
                     AuditService.PRODUCT, id,
                     product.getName() + ": " + before + " to " + stock);
@@ -172,7 +173,7 @@ public class AdminProductController {
     @PostMapping("/{id}/archive")
     public String archive(@PathVariable Long id, Principal principal, RedirectAttributes flash) {
         Product product = productService.archive(id);
-        log.info("Product {} archived by {}", id, principal.getName());
+        log.info("Product {} archived by {}", id, Redact.email(principal.getName()));
         auditService.record(principal.getName(), AdminActionType.PRODUCT_ARCHIVED,
                 AuditService.PRODUCT, id, product.getName());
         flash.addFlashAttribute("message",
@@ -183,7 +184,7 @@ public class AdminProductController {
     @PostMapping("/{id}/restore")
     public String restore(@PathVariable Long id, Principal principal, RedirectAttributes flash) {
         Product product = productService.restore(id);
-        log.info("Product {} restored by {}", id, principal.getName());
+        log.info("Product {} restored by {}", id, Redact.email(principal.getName()));
         auditService.record(principal.getName(), AdminActionType.PRODUCT_RESTORED,
                 AuditService.PRODUCT, id, product.getName());
         flash.addFlashAttribute("message", product.getName() + " is back in the shop.");

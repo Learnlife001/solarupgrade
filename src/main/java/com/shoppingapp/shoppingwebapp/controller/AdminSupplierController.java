@@ -8,6 +8,7 @@ import com.shoppingapp.shoppingwebapp.model.Supplier;
 import com.shoppingapp.shoppingwebapp.model.SupplierTrade;
 import com.shoppingapp.shoppingwebapp.service.AuditService;
 import com.shoppingapp.shoppingwebapp.service.SupplierService;
+import com.shoppingapp.shoppingwebapp.support.Redact;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,7 +97,7 @@ public class AdminSupplierController {
                 isNew ? AdminActionType.SUPPLIER_ADDED : AdminActionType.SUPPLIER_UPDATED,
                 AuditService.SUPPLIER, saved.getId(),
                 saved.getName() + " — " + saved.getExportStance().getDisplayName());
-        log.info("Supplier {} {} by {}", saved.getId(), isNew ? "added" : "updated", principal.getName());
+        log.info("Supplier {} {} by {}", saved.getId(), isNew ? "added" : "updated", Redact.email(principal.getName()));
 
         flash.addFlashAttribute("message", saved.getName() + (isNew ? " added." : " saved."));
         return "redirect:/admin/suppliers";
@@ -131,7 +132,7 @@ public class AdminSupplierController {
         auditService.record(principal.getName(), AdminActionType.SUPPLIER_REMOVED,
                 AuditService.SUPPLIER, id, name);
         suppliers.delete(id);
-        log.info("Supplier {} removed by {}", id, principal.getName());
+        log.info("Supplier {} removed by {}", id, Redact.email(principal.getName()));
         flash.addFlashAttribute("message", name + " removed from the directory.");
         return "redirect:/admin/suppliers";
     }

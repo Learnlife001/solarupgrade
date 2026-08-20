@@ -344,7 +344,12 @@ a real order named `=HYPERLINK(...)` and checks it comes out inert.
 
 **Written a page at a time and streamed**, so the export does not have to hold
 every order in memory — which would fail on exactly the shop that most needs a
-backup.
+backup. The cost of streaming is that the response is already a `200` with rows
+in it before anything can go wrong, so a failure part-way through cannot change
+the status: it would hand back a truncated file that looks complete. The export
+writes `# EXPORT FAILED PART-WAY THROUGH` into the file itself and raises an
+alert, because a backup that is quietly half a backup is worse than one that
+obviously failed.
 
 **Taking a copy is audited.** It is a bulk read of every customer's name and
 address, so who took one and when is recorded. That also meant letting an audit

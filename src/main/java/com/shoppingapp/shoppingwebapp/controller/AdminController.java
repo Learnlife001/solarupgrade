@@ -8,7 +8,9 @@ import com.shoppingapp.shoppingwebapp.service.OrderExportService;
 import com.shoppingapp.shoppingwebapp.service.OrderService;
 import com.shoppingapp.shoppingwebapp.service.ProductService;
 import com.shoppingapp.shoppingwebapp.service.payment.PaymentException;
+import com.shoppingapp.shoppingwebapp.service.alerts.ErrorAlerter;
 import com.shoppingapp.shoppingwebapp.service.payment.PaymentService;
+import com.shoppingapp.shoppingwebapp.support.Redact;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -62,17 +64,20 @@ public class AdminController {
     private final AuditService auditService;
     private final PaymentService paymentService;
     private final OrderExportService orderExportService;
+    private final ErrorAlerter alerter;
 
     public AdminController(OrderService orderService,
                            ProductService productService,
                            AuditService auditService,
                            PaymentService paymentService,
-                           OrderExportService orderExportService) {
+                           OrderExportService orderExportService,
+                           ErrorAlerter alerter) {
         this.orderService = orderService;
         this.productService = productService;
         this.auditService = auditService;
         this.paymentService = paymentService;
         this.orderExportService = orderExportService;
+        this.alerter = alerter;
     }
 
     @GetMapping
@@ -139,14 +144,26 @@ public class AdminController {
     @GetMapping("/orders.csv")
     public ResponseEntity<StreamingResponseBody> exportOrders(Principal principal) {
         String filename = orderExportService.filename();
-        log.info("Order export taken by {}", principal.getName());
+        log.info("Order export taken by {}", Redact.email(principal.getName()));
         auditService.record(principal.getName(), AdminActionType.ORDERS_EXPORTED,
                 AuditService.ORDER, "Downloaded " + filename);
 
         StreamingResponseBody body = out -> {
             try (Writer writer = new OutputStreamWriter(out, StandardCharsets.UTF_8)) {
-                long written = orderExportService.writeTo(writer);
-                log.info("Exported {} orders", written);
+                try {
+                    long written = orderExportService.writeTo(writer);
+                    log.info("Exported {} orders", written);
+                } catch (Exception ex) {
+                    // The response is already 200 with rows in it by now, so
+                    // there is no status left to change: a failure here hands
+                    // back a truncated file that looks complete, which is the
+                    // worst possible outcome for something kept as a backup.
+                    // Saying so in the file itself is the only way the reader
+                    // can tell.
+                    log.error("Order export failed part-way through", ex);
+                    writer.write("# EXPORT FAILED PART-WAY THROUGH — THIS FILE IS INCOMPLETE\r\n");
+                    alerter.jobFailed("Order export", "the CSV download", ex);
+                }
             }
         };
 
@@ -174,7 +191,7 @@ public class AdminController {
     public String ship(@PathVariable Long id, Principal principal, RedirectAttributes flash) {
         Order order = orderService.getAnyOrder(id);
         if (orderService.markShipped(id)) {
-            log.info("Order {} marked shipped by {}", id, principal.getName());
+            log.info("Order {} marked shipped by {}", id, Redact.email(principal.getName()));
             auditService.record(principal.getName(), AdminActionType.ORDER_SHIPPED,
                     AuditService.ORDER, id, "Customer emailed a dispatch notice");
             flash.addFlashAttribute("message", "Order #" + id + " marked as shipped. The customer has been emailed.");
@@ -216,7 +233,7 @@ public class AdminController {
         boolean shipped = order.getStatus() == OrderStatus.SHIPPED;
         try {
             if (paymentService.refund(id)) {
-                log.info("Order {} refunded by {}", id, principal.getName());
+                log.info("Order {} refunded by {}", id, Redact.email(principal.getName()));
                 auditService.record(principal.getName(), AdminActionType.ORDER_REFUNDED,
                         AuditService.ORDER, id,
                         order.getTotalDisplay() + " refunded — " + reason.trim()
@@ -243,7 +260,7 @@ public class AdminController {
     public String cancel(@PathVariable Long id, Principal principal, RedirectAttributes flash) {
         Order order = orderService.getAnyOrder(id);
         if (orderService.cancelUnpaid(id)) {
-            log.info("Order {} cancelled by {}", id, principal.getName());
+            log.info("Order {} cancelled by {}", id, Redact.email(principal.getName()));
             auditService.record(principal.getName(), AdminActionType.ORDER_CANCELLED,
                     AuditService.ORDER, id,
                     order.getItemCount() + " item(s) returned to stock; customer notified");
