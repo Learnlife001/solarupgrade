@@ -88,7 +88,7 @@ public class OrderController {
         }
 
         try {
-            return "redirect:" + paymentService.beginPayPal(order);
+            return "redirect:" + paymentService.begin(order);
         } catch (PaymentException ex) {
             log.warn("Could not start PayPal payment for order {}", id, ex);
             redirectAttributes.addFlashAttribute("error",

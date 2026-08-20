@@ -7,7 +7,6 @@ import com.shoppingapp.shoppingwebapp.repository.OrderRepository;
 import com.shoppingapp.shoppingwebapp.service.OrderService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,16 +30,16 @@ public class PaymentService {
 
     private static final Logger log = LoggerFactory.getLogger(PaymentService.class);
 
-    private final ObjectProvider<PayPalClient> payPalProvider;
+    private final PaymentProviders providers;
     private final OrderRepository orderRepository;
     private final OrderService orderService;
     private final String baseUrl;
 
-    public PaymentService(ObjectProvider<PayPalClient> payPalProvider,
+    public PaymentService(PaymentProviders providers,
                           OrderRepository orderRepository,
                           OrderService orderService,
                           @Value("${app.base-url:http://localhost:8080}") String baseUrl) {
-        this.payPalProvider = payPalProvider;
+        this.providers = providers;
         this.orderRepository = orderRepository;
         this.orderService = orderService;
         this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
@@ -48,7 +47,18 @@ public class PaymentService {
 
     /** True when this method can actually take money right now. */
     public boolean isLive(PaymentMethod method) {
-        return method == PaymentMethod.PAYPAL && payPalProvider.getIfAvailable() != null;
+        return providers.forMethod(method).isPresent();
+    }
+
+    /** The provider serving an order's chosen method, or a refusal. */
+    private PaymentProvider require(PaymentMethod method) {
+        return providers.forMethod(method)
+                .orElseThrow(() -> new PaymentException(
+                        method.getDisplayName() + " is not configured on this deployment"));
+    }
+
+    public Optional<PaymentProvider> byId(String providerId) {
+        return providers.byId(providerId);
     }
 
     /**
@@ -58,23 +68,20 @@ public class PaymentService {
      * conversion: the buyer pays the figure they were quoted.
      */
     @Transactional
-    public String beginPayPal(Order order) {
-        PayPalClient payPal = requirePayPal();
+    public String begin(Order order) {
+        PaymentProvider provider = require(order.getPaymentMethod());
         if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
             throw new PaymentException("Order " + order.getId() + " is not awaiting payment");
         }
 
-        PayPalClient.CreatedOrder created = payPal.createOrder(
-                order.getId(),
-                order.getPaymentAmount(),
-                order.getPaymentCurrency(),
-                baseUrl + "/payments/paypal/return?order=" + order.getId(),
-                baseUrl + "/payments/paypal/cancel?order=" + order.getId());
+        PaymentProvider.Checkout checkout = provider.begin(order,
+                baseUrl + "/payments/" + provider.id() + "/return?order=" + order.getId(),
+                baseUrl + "/payments/" + provider.id() + "/cancel?order=" + order.getId());
 
-        order.setProviderReference(created.id());
+        order.setProviderReference(checkout.reference());
         orderRepository.save(order);
-        log.info("Started PayPal order {} for order {}", created.id(), order.getId());
-        return created.approvalUrl();
+        log.info("Started {} payment {} for order {}", provider.id(), checkout.reference(), order.getId());
+        return checkout.redirectUrl();
     }
 
     /**
@@ -83,32 +90,34 @@ public class PaymentService {
      * @return true when the order is paid as a result (or already was)
      */
     @Transactional
-    public boolean completePayPal(Order order) {
+    public boolean complete(Order order) {
         if (order.getStatus() == OrderStatus.PAID) {
             // Already settled, most likely by the webhook getting here first.
             return true;
         }
         String reference = order.getProviderReference();
         if (reference == null || reference.isBlank()) {
-            throw new PaymentException("Order " + order.getId() + " has no PayPal order to capture");
+            throw new PaymentException("Order " + order.getId() + " has no payment to capture");
         }
 
-        PayPalClient.Capture capture = requirePayPal().capture(reference);
+        PaymentProvider provider = require(order.getPaymentMethod());
+        PaymentProvider.CaptureResult capture = provider.capture(order);
         if (!capture.completed()) {
-            log.warn("PayPal capture for order {} came back {}", order.getId(), capture.status());
+            log.warn("{} capture for order {} came back {}",
+                    provider.id(), order.getId(), capture.status());
             return false;
         }
         if (!chargeMatches(order, capture)) {
             // Refuse to dispatch goods against a payment that is not the one
             // we asked for. Louder than a silent pass, and rarer than a bug.
-            log.error("PayPal captured {} {} for order {} but we asked for {} {}",
-                    capture.amount(), capture.currency(), order.getId(),
+            log.error("{} captured {} {} for order {} but we asked for {} {}",
+                    provider.id(), capture.amount(), capture.currency(), order.getId(),
                     order.getPaymentAmount(), order.getPaymentCurrency());
             throw new PaymentException("Captured amount does not match order " + order.getId());
         }
 
         orderService.markPaid(order);
-        log.info("Order {} paid via PayPal {}", order.getId(), reference);
+        log.info("Order {} paid via {} {}", order.getId(), provider.id(), reference);
         return true;
     }
 
@@ -151,17 +160,7 @@ public class PaymentService {
         log.info("Order {} paid via webhook", orderId);
     }
 
-    public boolean verifyWebhook(java.util.Map<String, String> headers, String rawBody) {
-        PayPalClient payPal = payPalProvider.getIfAvailable();
-        return payPal != null && payPal.verifyWebhook(headers, rawBody);
-    }
-
-    public boolean webhookVerificationConfigured() {
-        PayPalClient payPal = payPalProvider.getIfAvailable();
-        return payPal != null && payPal.canVerifyWebhooks();
-    }
-
-    private static boolean chargeMatches(Order order, PayPalClient.Capture capture) {
+    private static boolean chargeMatches(Order order, PaymentProvider.CaptureResult capture) {
         if (capture.amount() == null || capture.currency() == null) {
             return false;
         }
@@ -169,11 +168,4 @@ public class PaymentService {
                 && capture.amount().compareTo(order.getPaymentAmount()) == 0;
     }
 
-    private PayPalClient requirePayPal() {
-        PayPalClient payPal = payPalProvider.getIfAvailable();
-        if (payPal == null) {
-            throw new PaymentException("PayPal is not configured on this deployment");
-        }
-        return payPal;
-    }
 }

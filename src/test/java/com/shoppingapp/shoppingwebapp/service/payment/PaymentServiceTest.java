@@ -105,7 +105,7 @@ class PaymentServiceTest {
         when(payPal.createOrder(anyLong(), any(), anyString(), anyString(), anyString()))
                 .thenReturn(new PayPalClient.CreatedOrder("PP-1", "https://paypal.example/approve"));
 
-        String approvalUrl = paymentService.beginPayPal(order);
+        String approvalUrl = paymentService.begin(order);
 
         assertThat(approvalUrl).isEqualTo("https://paypal.example/approve");
         // The snapshot, not a fresh conversion.
@@ -123,7 +123,7 @@ class PaymentServiceTest {
         when(payPal.capture("PP-2")).thenReturn(new PayPalClient.Capture(
                 true, "COMPLETED", order.getPaymentAmount(), "EUR"));
 
-        assertThat(paymentService.completePayPal(order)).isTrue();
+        assertThat(paymentService.complete(order)).isTrue();
         assertThat(reload(order.getId()).getStatus()).isEqualTo(OrderStatus.PAID);
     }
 
@@ -135,7 +135,7 @@ class PaymentServiceTest {
         when(payPal.capture("PP-3")).thenReturn(new PayPalClient.Capture(
                 false, "DECLINED", null, null));
 
-        assertThat(paymentService.completePayPal(order)).isFalse();
+        assertThat(paymentService.complete(order)).isFalse();
         assertThat(reload(order.getId()).getStatus()).isEqualTo(OrderStatus.PENDING_PAYMENT);
     }
 
@@ -151,7 +151,7 @@ class PaymentServiceTest {
         when(payPal.capture("PP-4")).thenReturn(new PayPalClient.Capture(
                 true, "COMPLETED", new BigDecimal("1.00"), "EUR"));
 
-        assertThatThrownBy(() -> paymentService.completePayPal(order))
+        assertThatThrownBy(() -> paymentService.complete(order))
                 .isInstanceOf(PaymentException.class);
         assertThat(reload(order.getId()).getStatus()).isEqualTo(OrderStatus.PENDING_PAYMENT);
     }
@@ -164,7 +164,7 @@ class PaymentServiceTest {
         when(payPal.capture("PP-5")).thenReturn(new PayPalClient.Capture(
                 true, "COMPLETED", order.getPaymentAmount(), "USD"));
 
-        assertThatThrownBy(() -> paymentService.completePayPal(order))
+        assertThatThrownBy(() -> paymentService.complete(order))
                 .isInstanceOf(PaymentException.class);
         assertThat(reload(order.getId()).getStatus()).isEqualTo(OrderStatus.PENDING_PAYMENT);
     }
@@ -177,7 +177,7 @@ class PaymentServiceTest {
         order.setStatus(OrderStatus.PAID);
         orderRepository.save(order);
 
-        assertThat(paymentService.completePayPal(order)).isTrue();
+        assertThat(paymentService.complete(order)).isTrue();
         verify(payPal, never()).capture(anyString());
     }
 
@@ -249,7 +249,7 @@ class PaymentServiceTest {
         when(payPal.capture("PP-11")).thenReturn(new PayPalClient.Capture(
                 true, "COMPLETED", order.getPaymentAmount(), "EUR"));
 
-        paymentService.completePayPal(order);
+        paymentService.complete(order);
         // Then the webhook arrives for the same payment, as it will.
         paymentService.settleFromWebhook(order.getId(), "PP-11", order.getPaymentAmount(), "EUR");
 
@@ -264,7 +264,7 @@ class PaymentServiceTest {
         when(payPal.capture("PP-12")).thenReturn(new PayPalClient.Capture(
                 false, "DECLINED", null, null));
 
-        paymentService.completePayPal(order);
+        paymentService.complete(order);
 
         verify(emailService, never()).sendPaymentReceived(any(Order.class));
     }
@@ -287,7 +287,7 @@ class PaymentServiceTest {
         order.setStatus(OrderStatus.PAID);
         orderRepository.save(order);
 
-        assertThatThrownBy(() -> paymentService.beginPayPal(order))
+        assertThatThrownBy(() -> paymentService.begin(order))
                 .isInstanceOf(PaymentException.class);
     }
 }

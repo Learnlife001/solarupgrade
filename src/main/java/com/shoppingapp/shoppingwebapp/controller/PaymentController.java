@@ -6,6 +6,7 @@ import com.shoppingapp.shoppingwebapp.model.Order;
 import com.shoppingapp.shoppingwebapp.model.User;
 import com.shoppingapp.shoppingwebapp.service.OrderService;
 import com.shoppingapp.shoppingwebapp.service.payment.PaymentException;
+import com.shoppingapp.shoppingwebapp.service.payment.PaymentProvider;
 import com.shoppingapp.shoppingwebapp.service.payment.PaymentService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -13,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -57,42 +59,48 @@ public class PaymentController {
     }
 
     /**
-     * Where PayPal sends the buyer after they approve.
+     * Where a provider sends the buyer after they approve.
      *
      * <p>Arriving here is not proof of anything -- the URL could be typed. It
-     * is the capture call this triggers, which we make to PayPal ourselves,
-     * whose answer decides whether the order is paid.
+     * is the capture call this triggers, which we make to the provider
+     * ourselves, whose answer decides whether the order is paid.
      *
      * <p>Scoped to the signed-in user, so pasting someone else's order number
      * captures nothing.
+     *
+     * <p>The provider is a path variable rather than a route each: PayPal's
+     * existing /payments/paypal/return keeps working unchanged, and a provider
+     * added later needs no new controller.
      */
-    @GetMapping("/paypal/return")
-    public String payPalReturn(@RequestParam("order") Long orderId,
-                               Principal principal,
-                               RedirectAttributes redirectAttributes) {
+    @GetMapping("/{provider}/return")
+    public String paymentReturn(@PathVariable("provider") String providerId,
+                                @RequestParam("order") Long orderId,
+                                Principal principal,
+                                RedirectAttributes redirectAttributes) {
         User user = currentUser.require(principal);
         Order order = orderService.getForUser(orderId, user);
 
         try {
-            if (paymentService.completePayPal(order)) {
+            if (paymentService.complete(order)) {
                 redirectAttributes.addFlashAttribute("message", "Payment received — thank you.");
             } else {
                 redirectAttributes.addFlashAttribute("error",
-                        "PayPal did not complete the payment. Nothing has been charged.");
+                        "The payment was not completed. Nothing has been charged.");
             }
         } catch (PaymentException ex) {
-            log.warn("PayPal capture failed for order {}", orderId, ex);
+            log.warn("Capture failed for order {} at {}", orderId, providerId, ex);
             redirectAttributes.addFlashAttribute("error",
                     "We could not confirm that payment. Nothing has been charged — please try again.");
         }
         return "redirect:/orders/" + orderId;
     }
 
-    /** The buyer backed out on PayPal's side. The order stays unpaid. */
-    @GetMapping("/paypal/cancel")
-    public String payPalCancel(@RequestParam("order") Long orderId,
-                               Principal principal,
-                               RedirectAttributes redirectAttributes) {
+    /** The buyer backed out on the provider's side. The order stays unpaid. */
+    @GetMapping("/{provider}/cancel")
+    public String paymentCancel(@PathVariable("provider") String providerId,
+                                @RequestParam("order") Long orderId,
+                                Principal principal,
+                                RedirectAttributes redirectAttributes) {
         currentUser.require(principal);
         redirectAttributes.addFlashAttribute("message",
                 "Payment cancelled. Your order is still here when you want it.");
@@ -100,60 +108,51 @@ public class PaymentController {
     }
 
     /**
-     * PayPal's server-to-server notification.
+     * A provider's server-to-server notification.
      *
      * <p>Open to the internet by necessity, so every body is treated as hostile
-     * until PayPal itself confirms it signed it. Unverified means ignored --
-     * never "probably fine".
+     * until the provider itself confirms it signed it. Unverified means ignored
+     * -- never "probably fine".
      *
      * <p>Answers 200 to anything it decides not to act on, because a provider
      * that gets an error retries for hours; the log line is how a genuine
      * problem gets noticed.
+     *
+     * <p>Nothing here knows one provider's JSON from another's. The provider
+     * verifies the signature and reads its own body; this method decides only
+     * whether to act on what comes back.
      */
-    @PostMapping("/paypal/webhook")
+    @PostMapping("/{provider}/webhook")
     @ResponseBody
-    public ResponseEntity<String> payPalWebhook(@RequestBody String rawBody,
-                                                HttpServletRequest request) {
-        if (!paymentService.webhookVerificationConfigured()) {
-            // No webhook id means no way to tell a real notification from a
-            // forged one, so nothing is acted on.
-            log.warn("Received a PayPal webhook but app.paypal.webhook-id is not set; ignoring");
+    public ResponseEntity<String> webhook(@PathVariable("provider") String providerId,
+                                          @RequestBody String rawBody,
+                                          HttpServletRequest request) {
+        PaymentProvider provider = paymentService.byId(providerId).orElse(null);
+        if (provider == null) {
+            log.warn("Webhook for unknown payment provider {}", providerId);
             return ResponseEntity.ok("ignored");
         }
-        if (!paymentService.verifyWebhook(signatureHeaders(request), rawBody)) {
-            log.warn("Rejected a PayPal webhook that failed signature verification");
+        if (!provider.canVerifyWebhooks()) {
+            // No signing secret means no way to tell a real notification from a
+            // forged one, so nothing is acted on.
+            log.warn("Received a {} webhook but it cannot be verified on this deployment; ignoring",
+                    providerId);
+            return ResponseEntity.ok("ignored");
+        }
+        if (!provider.verifyWebhook(signatureHeaders(request, provider), rawBody)) {
+            log.warn("Rejected a {} webhook that failed signature verification", providerId);
             return ResponseEntity.ok("rejected");
         }
 
-        try {
-            JsonNode event = objectMapper.readTree(rawBody);
-            String type = event.path("event_type").asText("");
-            if (!"PAYMENT.CAPTURE.COMPLETED".equals(type)) {
-                return ResponseEntity.ok("ignored");
-            }
-
-            JsonNode resource = event.path("resource");
-            Long orderId = parseOrderId(resource.path("custom_id").asText(null));
-            if (orderId == null) {
-                log.warn("PayPal webhook carried no usable custom_id");
-                return ResponseEntity.ok("ignored");
-            }
-
-            paymentService.settleFromWebhook(
-                    orderId,
-                    resource.path("supplementary_data").path("related_ids")
-                            .path("order_id").asText(null),
-                    amountOf(resource),
-                    resource.path("amount").path("currency_code").asText(null));
-        } catch (Exception ex) {
-            log.error("Could not process a verified PayPal webhook", ex);
-        }
+        provider.readWebhook(rawBody).ifPresent(event -> paymentService.settleFromWebhook(
+                event.orderId(), event.reference(), event.amount(), event.currency()));
         return ResponseEntity.ok("ok");
     }
 
-    private static Map<String, String> signatureHeaders(HttpServletRequest request) {
+    private static Map<String, String> signatureHeaders(HttpServletRequest request,
+                                                        PaymentProvider provider) {
         Map<String, String> headers = new HashMap<>();
-        for (String name : SIGNATURE_HEADERS) {
+        for (String name : provider.signatureHeaders()) {
             String value = request.getHeader(name);
             if (value != null) {
                 headers.put(name, value);

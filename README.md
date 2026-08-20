@@ -324,6 +324,52 @@ schema has nowhere to put one.
 **These pages have not been reviewed by a lawyer,** and every one of them says
 so. They are a solid starting point, not advice.
 
+## Adding a payment provider
+
+The shop is priced in naira and PayPal cannot charge naira, so this deployment
+converts to euro at a hand-set rate. That is a stopgap: the shop needs a
+Nigerian provider, and whoever takes this codebase on will be somewhere else
+again with a different obvious choice. So taking money is an interface with one
+implementation, not a service with PayPal wired through it.
+
+```java
+@Component
+@ConditionalOnProperty("app.paystack.secret-key")   // no key, no bean, no option
+class PaystackProvider implements PaymentProvider {
+    public String id() { return "paystack"; }        // the URL segment
+    public PaymentMethod method() { return PaymentMethod.CARD; }
+    public boolean isConfigured() { return true; }
+    public Checkout begin(Order order, String returnUrl, String cancelUrl) { … }
+    public CaptureResult capture(Order order) { … }
+    public boolean verifyWebhook(Map<String, String> headers, String body) { … }
+    public Optional<PaymentEvent> readWebhook(String body) { … }
+}
+```
+
+That is the whole change. `PaymentProviders` finds the bean, the checkout
+offers the method once `isConfigured()` is true, and
+`/payments/paystack/return`, `/cancel` and `/webhook` already route to it —
+the URLs carry the provider id, so no controller is written and PayPal's
+existing webhook URL is untouched. `PluggableProviderTest` does exactly this
+with a provider that has no PayPal in it, and fails if an
+`if (method == PAYPAL)` ever comes back.
+
+**Two rules the interface exists to keep.** An order becomes PAID only because
+a provider told us, in an exchange *we* started, that money moved — a browser
+arriving at a return URL is not evidence, since a URL can be typed, bookmarked
+or replayed. And a webhook that cannot be verified is ignored rather than
+trusted: unverifiable is indistinguishable from forged, and acting on it would
+mean dispatching goods on request.
+
+**Where the line falls.** `PayPalClient` speaks PayPal — OAuth, `custom_id`,
+captures nested under `purchase_units`, the five headers a signature needs.
+`PayPalProvider` translates that into the shop's vocabulary. Nothing
+PayPal-shaped reaches `PaymentService`, which is what makes the second provider
+cheap.
+
+Two providers claiming the same `PaymentMethod` fails at startup. Otherwise one
+of them takes the money and which one depends on bean ordering.
+
 ## Running the catalogue
 
 `/admin/products` creates, edits, restocks and retires products. Until this
@@ -1044,8 +1090,9 @@ src/main/resources/
 These are deliberate and worth picking up next:
 
 - **Only PayPal can take money, and only in sandbox.** Card and bank transfer
-  wait on OPay; going live needs a PayPal Business account, fresh Live
-  credentials and a new Live webhook.
+  wait on a Nigerian provider; going live needs a PayPal Business account,
+  fresh Live credentials and a new Live webhook. Adding that provider is now a
+  class rather than a rewrite — see "Adding a payment provider".
 - **No refunds.** A paid order can be shipped but not reversed, so a customer
   who wants their money back has to be handled outside the application.
 - **Legal pages need a lawyer's eye** before they are relied on, and the
