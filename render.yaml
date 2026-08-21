@@ -139,6 +139,22 @@ services:
       - key: APP_ALERTS_MAX_PER_HOUR
         value: "10"
 
+      # --- Search engines ---------------------------------------------------
+      # Off until the catalogue is real. The seeded products have invented
+      # prices and the legal pages say "draft"; being indexed with that showing
+      # is worse than not being found, and a search engine keeps its copy for
+      # weeks after either changes.
+      #
+      # The tags, sitemap and structured data are built either way; this only
+      # decides whether crawlers are invited. Set to true once real stock and
+      # real business details are in place.
+      - key: APP_SEO_INDEXABLE
+        value: "false"
+      # The sentence under the shop's name in a search result. Unset uses the
+      # default in application.properties.
+      - key: APP_SEO_DESCRIPTION
+        sync: false
+
       # --- Brand ------------------------------------------------------------
       # The name on the shop, in one place. Unset uses the defaults in
       # application.properties, which keep it working out of the box.

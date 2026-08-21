@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
-<head th:replace="~{fragments/layout :: head(${product.name})}"></head>
+<head th:replace="~{fragments/layout :: head(${product.name}, ${metaDescription})}"></head>
 <body>
 
 <div th:replace="~{fragments/layout :: header}"></div>
@@ -94,6 +94,31 @@
             </article>
         </div>
     </section>
+    <!--
+      What turns a plain result into one showing the price and whether it is in
+      stock. Written from the same fields the page renders, so it cannot say
+      something the page does not: a mismatch is what gets structured data
+      ignored, or the site penalised.
+
+      Prices are naira. The availability vocabulary is schema.org's, not ours.
+    -->
+    <script type="application/ld+json" th:inline="javascript">{
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "name": [[${product.name}]],
+      "description": [[${product.description}]],
+      "image": [[${ogImage}]],
+      "category": [[${product.category.displayName}]],
+      "offers": {
+        "@type": "Offer",
+        "url": [[${canonicalUrl}]],
+        "priceCurrency": "NGN",
+        "price": [[${product.price}]],
+        "availability": [[${product.stock > 0}
+            ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock']],
+        "itemCondition": "https://schema.org/NewCondition"
+      }
+    }</script>
 </main>
 
 <div th:replace="~{fragments/layout :: footer}"></div>

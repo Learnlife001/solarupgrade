@@ -3,6 +3,7 @@ package com.shoppingapp.shoppingwebapp.controller;
 import com.shoppingapp.shoppingwebapp.model.Category;
 import com.shoppingapp.shoppingwebapp.model.Product;
 import com.shoppingapp.shoppingwebapp.service.ProductService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,10 +13,18 @@ import org.springframework.web.bind.annotation.RequestParam;
 @Controller
 public class ProductController {
 
+    /**
+     * Absolute URLs are required in structured data and share previews: a
+     * crawler resolving /images/panel.svg against its own host gets nothing.
+     */
+    private final String baseUrl;
+
     private final ProductService productService;
 
-    public ProductController(ProductService productService) {
+    public ProductController(ProductService productService,
+                             @Value("${app.base-url:http://localhost:8080}") String baseUrl) {
         this.productService = productService;
+        this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
     }
 
     @GetMapping("/")
@@ -43,6 +52,13 @@ public class ProductController {
         Product product = productService.getWithSpecs(id);
         model.addAttribute("product", product);
         model.addAttribute("pairsWith", productService.pairsWith(product, 3));
+        // What a search result and a pasted link show: the product's own
+        // sentence rather than the shop's general one.
+        model.addAttribute("metaDescription", product.getDescription());
+        model.addAttribute("ogType", "product");
+        if (product.getImage() != null) {
+            model.addAttribute("ogImage", baseUrl + product.getImage());
+        }
         return "product-detail";
     }
 }

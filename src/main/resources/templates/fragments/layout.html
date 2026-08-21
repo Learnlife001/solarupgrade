@@ -1,7 +1,14 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
-<head th:fragment="head(pageTitle)">
+<!--
+  One head for every page, taking the description as well as the title.
+  Thymeleaf matches a fragment by name alone, not by how many parameters it
+  takes, so a second head(pageTitle) overload cannot exist beside this one --
+  it is picked arbitrarily and fails on the arity. Pages with nothing better to
+  say pass null and get the shop's own description.
+-->
+<head th:fragment="head(pageTitle, description)">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!--
@@ -10,6 +17,41 @@
       is renamed.
     -->
     <title th:text="${pageTitle} + ' · ' + ${brand.name}">Shop</title>
+
+    <!--
+      What a search result and a WhatsApp preview show. The page's own sentence
+      when it has one, the shop's otherwise.
+    -->
+    <meta name="description"
+          th:content="${#strings.isEmpty(description)} ? ${seo.description} : ${description}">
+
+    <!--
+      One address per page, whatever host or query string it was reached
+      through. Without this the same page is a different URL for every filter
+      combination, and a search engine treats each as a competing copy.
+    -->
+    <link rel="canonical" th:href="${canonicalUrl}">
+
+    <!--
+      Indexing is off until the catalogue is real; see the Seo settings. The
+      basket, the orders and the back office are never indexed whatever that
+      setting says.
+    -->
+    <meta name="robots" th:content="${indexable} ? 'index, follow' : 'noindex, nofollow'">
+
+    <!--
+      How the link looks when somebody shares it, which for this shop's
+      customers is mostly WhatsApp. Without these the preview is the URL and
+      nothing else.
+    -->
+    <meta property="og:type" th:content="${ogType} ?: 'website'">
+    <meta property="og:site_name" th:content="${brand.name}">
+    <meta property="og:title" th:content="${pageTitle} + ' · ' + ${brand.name}">
+    <meta property="og:description"
+          th:content="${#strings.isEmpty(description)} ? ${seo.description} : ${description}">
+    <meta property="og:url" th:content="${canonicalUrl}">
+    <meta property="og:image" th:if="${ogImage}" th:content="${ogImage}">
+    <meta name="twitter:card" th:content="${ogImage} ? 'summary_large_image' : 'summary'">
     <!-- SVG favicon so the monogram stays sharp on any display. -->
     <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
     <link rel="stylesheet" th:href="@{/css/style.css}">

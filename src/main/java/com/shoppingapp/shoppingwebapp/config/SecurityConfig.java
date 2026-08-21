@@ -125,7 +125,12 @@ public class SecurityConfig {
                                     "/suppliers", "/suppliers/**",
                                     "/css/**", "/js/**", "/images/**",
                                     // Browsers fetch these before any session exists.
-                                    "/favicon.svg", "/favicon.ico").permitAll()
+                                    "/favicon.svg", "/favicon.ico",
+                                    // A crawler cannot sign in. Behind the
+                                    // login these two are simply absent, and a
+                                    // shop with no robots.txt and no sitemap is
+                                    // one nobody is told how to read.
+                                    "/robots.txt", "/sitemap.xml").permitAll()
                             // Server-to-server, so no session ever exists here.
                             // Authenticity comes from PayPal's own signature check,
                             // not from being behind a login; see PaymentController.

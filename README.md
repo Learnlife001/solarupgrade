@@ -359,6 +359,40 @@ it at all, would each have been worse than a nullable column.
 The file holds personal data — names, addresses, email addresses. Wherever it
 is put is now somewhere customer data lives, and it should be treated that way.
 
+## Being found
+
+Meta descriptions, canonical URLs, Open Graph tags, `robots.txt`, `sitemap.xml`
+and `Product` structured data — and **indexing is off by default**.
+
+That last part is the important one. The catalogue ships as sample data with
+invented prices, and every legal page carries a "draft — not in force" notice
+until the business details are set. Being found with that showing is worse than
+not being found: the prices are wrong, the terms are not binding, and a search
+engine keeps its copy for weeks after either changes. So everything is built and
+correct, and `APP_SEO_INDEXABLE` decides whether anybody is invited to read it.
+Turn it on when the catalogue is real.
+
+| Piece | What it does |
+|---|---|
+| `<meta name="description">` | The sentence under the shop's name in a result. A product uses its own; other pages use `app.seo.description` |
+| `<link rel="canonical">` | One address per page. Built from the path only, so `?category=PANEL` is not a second copy of the listing competing with the first |
+| Open Graph + Twitter card | What a link looks like pasted into WhatsApp, which is how most of this shop's customers will share one. Without them the preview is a bare URL |
+| `robots.txt` | Refuses everything while indexing is off. When on, still closes the basket, orders, checkout, payments and the back office |
+| `sitemap.xml` | Generated from the catalogue, so it cannot list archived products or miss new ones. A hand-written one goes stale, and a sitemap full of 404s is a false statement about what the shop sells |
+| `Product` JSON-LD | Price, currency and availability, which is what turns a plain result into one showing "₦380,000 · In stock" |
+
+**Private pages are `noindex` on their own account**, not merely because the
+shop-wide setting is off — turning indexing on must not put somebody's order
+into a search engine. `SeoIndexingOnTest` runs the whole application with
+indexing enabled and checks the basket and the order list stay closed.
+
+**`robots.txt` and `sitemap.xml` are permitted without signing in.** A crawler
+cannot log in; behind the login they are simply absent.
+
+The structured data is asserted by parsing it, not by matching strings. A block
+that does not parse is silently ignored by everything that reads it, so "the
+text is in the page" is not the thing worth checking.
+
 ## Changing your mind
 
 Until recently the only thing a customer could do with an order was pay for it.

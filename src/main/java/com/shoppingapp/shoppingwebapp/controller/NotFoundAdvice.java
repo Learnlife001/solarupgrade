@@ -2,6 +2,9 @@ package com.shoppingapp.shoppingwebapp.controller;
 
 import com.shoppingapp.shoppingwebapp.config.Brand;
 import com.shoppingapp.shoppingwebapp.config.BusinessDetails;
+import com.shoppingapp.shoppingwebapp.config.Seo;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -31,10 +34,15 @@ public class NotFoundAdvice {
 
     private final Brand brand;
     private final BusinessDetails business;
+    private final Seo seo;
+    private final String baseUrl;
 
-    public NotFoundAdvice(Brand brand, BusinessDetails business) {
+    public NotFoundAdvice(Brand brand, BusinessDetails business, Seo seo,
+                          @Value("${app.base-url:http://localhost:8080}") String baseUrl) {
         this.brand = brand;
         this.business = business;
+        this.seo = seo;
+        this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
     }
 
     /**
@@ -48,14 +56,24 @@ public class NotFoundAdvice {
      */
     @ExceptionHandler(NoSuchElementException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    public String notFound(Model model) {
+    public String notFound(Model model, HttpServletRequest request) {
         // Spring does not run @ModelAttribute methods for exception handlers,
         // so the page furniture every template expects has to be put back by
         // hand. Without it the 404 page throws while rendering the header, and
         // a missing product becomes a 500 after all.
+        //
+        // This has now caught three separate additions to the shared layout, so
+        // the rule is worth stating: anything the layout reads from the model
+        // must be added here too. The layout currently needs brand, business,
+        // cartCount, seo, canonicalUrl and indexable.
         model.addAttribute("brand", brand);
         model.addAttribute("business", business);
         model.addAttribute("cartCount", 0);
+        model.addAttribute("seo", seo);
+        model.addAttribute("canonicalUrl", baseUrl + request.getRequestURI());
+        // A page that does not exist is never worth indexing, whatever the
+        // setting says.
+        model.addAttribute("indexable", false);
         return "not-found";
     }
 }
